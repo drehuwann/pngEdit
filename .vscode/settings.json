@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "filesystem": "cpp",
+        "xiosbase": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "enabled"
+}

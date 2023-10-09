@@ -1,0 +1,2 @@
+#define pngEditor_VERSION_MAJOR @pngEditor_VERSION_MAJOR@
+#define pngEditor_VERSION_MINOR @pngEditor_VERSION_MINOR@

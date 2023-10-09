@@ -1,0 +1,34 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cmake",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "type": "shell",
+            "windows": {
+                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build .; cd src; cp Debug/pngEditor.exe ../../output; cd ../../.vscode; cp launchWin.json launch.json; popd",
+                "problemMatcher": "$msCompile"    
+            },
+            "linux": {
+                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build .; cd src; cp pngEditor ../../output;  cd ../../.vscode; ln -sf ./launchLin.json launch.json; popd",
+                "problemMatcher": "$gcc"    
+            },
+            "osx": {
+                "command": "echo osx not implemented yet",
+            }
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "pushd ${workspaceFolder}/build; rm -r *; rm -r .*; rm ../output/*; popd",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}
