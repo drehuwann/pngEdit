@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
          AppendMenu(hMenubar, MF_POPUP, (UINT_PTR)hHelp, _T("Help"));
          AppendMenu(hFile, MF_STRING, ID_Save, _T("Save"));
          AppendMenu(hFile, MF_STRING, ID_Load, _T("Open"));
-         //TODO add separator there
+         AppendMenu(hFile, MF_SEPARATOR, 0, 0);
          AppendMenu(hFile, MF_STRING, ID_Exit, _T("Exit"));
          AppendMenu(hEdit, MF_STRING, ID_Undo, _T("Undo"));
          AppendMenu(hEdit, MF_STRING, ID_Redo, _T("Redo"));
