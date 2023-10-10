@@ -7,5 +7,5 @@ Model::Model() {
 Model::~Model() {}
 
 void Model::PickFile(const char *path) {
-    if (m_file->Pick(path) <= 0) throw;
+    if (m_file->Pick(path) < 0) throw;
 }

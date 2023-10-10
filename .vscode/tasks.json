@@ -23,10 +23,17 @@
         {
             "label": "clean",
             "type": "shell",
-            "command": "pushd ${workspaceFolder}/build; rm -r *; rm -r .*; rm ../output/*; popd",
-            "problemMatcher": [
-                "$gcc"
-            ]
+            "windows": {
+                "command": "pushd ${workspaceFolder}/build; rm -r *; git restore ./.gitignore; rm ../output/pngEditor.exe; popd",
+                "problemMatcher": "$msCompile"
+            },
+            "linux": {
+                "command": "pushd ${workspaceFolder}/build; rm -r *; rm ../output/pngEditor; popd",
+                "problemMatcher": "$gcc"
+            },
+            "osx": {
+                "command": "echo osx not implemented yet",
+            }            
         }
     ]
 }

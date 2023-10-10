@@ -152,7 +152,7 @@ Error ChunkIHDR::Read(void *data) {
                 }
                 break;
             case 3:
-                if (imInfo->bitfield.bitDepth.to_ulong() != 16UL) {
+                if (imInfo->bitfield.bitDepth.to_ulong() == 16UL) {
                     return Error::BADHEADER;
                 }
                 break;
@@ -218,13 +218,14 @@ Error ChunkIDAT::Read(void *data) {
         return Error::MEMORYERROR;
     }
     if (!isInitialized) return Error::NOTINITIALIZED;
+    //TODO zlib integration | implementation
     return Error::NONE;
 }
 
 Error ChunkIEND::Read(void *data) {
     if (!data) return Error::MEMORYERROR;
     if (!isInitialized) return Error::NOTINITIALIZED;
-    return Error::NONE;
+    return Error::IENDREACHED;
 }
 
 /*void* cb_cHRM(Error &errCode, Chunk *parent) {return nullptr;}

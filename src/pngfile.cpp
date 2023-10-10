@@ -30,7 +30,7 @@ Error PngFile::isPng() {
     if (! std::fread(&tag, sizeof(tag) , 1, fileBuffer)) return Error::FAILREAD;
     if ((tag[0] != 'I') || (tag[1] != 'H') || (tag[2] != 'D') || (tag[3] != 'R')) return Error::BADHEADER;
 
-    // Sets file position indicator on first chink's firdt byte
+    // Sets file position indicator on first chunk's first byte
     if (std::fseek(fileBuffer, 0, SEEK_SET) != 0) return Error::FAILSEEK;
     if (! std::fread(&signature, 8 , 1, fileBuffer)) return Error::FAILREAD;
 
@@ -109,7 +109,15 @@ Error PngFile::Load() {
         }
     }
 //TODO on reprends ci-dessus...
-
+    if (errCode == Error::IENDREACHED) {
+        if (fgetc(fileBuffer) == EOF) {
+            errCode = feof(fileBuffer)? Error::NONE : Error::FAILREAD;
+        } else {
+            fseek(fileBuffer, -1, SEEK_CUR); //rewind the fgetc
+            //TODO Tell the user there is something beyond IEND and ask what to do. 
+        }
+    }
+    if (fclose(fileBuffer) == EOF) errCode = Error::FAILCLOSE;
     return errCode;
 }
 

@@ -12,6 +12,11 @@ class MyFrame; //Fwd declaration
 #include "controller.h"
 
 // Global variables
+struct s_engineRefs {
+   Model *m_model = nullptr;
+   HWND m_vue = nullptr;
+   Controller *m_controller = nullptr;
+} engine;
 
 // object to represent actualluy openned file
 PngFile *m_filePtr = nullptr;
@@ -33,12 +38,6 @@ eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
 (See https://gnu.org/licenses/gpl.html)"
 
 // common functions
-struct s_engineRefs {
-   Model *m_model = nullptr;
-   HWND m_vue = nullptr;
-   Controller *m_controller = nullptr;
-} engine;
-
 s_engineRefs *InitEngine(HWND hWnd) {
    engine.m_vue = hWnd;
    if (!(engine.m_model = new Model()) || !(engine.m_controller = new Controller())) return nullptr;
@@ -135,14 +134,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
    return (int) msg.wParam;
 }
 
-
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE:  Processes messages for the main window.
-//
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
    PAINTSTRUCT ps;
    HDC hdc;
@@ -211,13 +202,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
       }
       case WM_PAINT:
          hdc = BeginPaint(hWnd, &ps);
-
-         // Here your application is laid out.
-         // For this introduction, we just print out "Hello, Windows desktop!"
-         // in the top left corner.
          TextOut(hdc, 5, 5, greeting, _tcslen(greeting));
-
-         // End application-specific layout section.
          EndPaint(hWnd, &ps);
          break;
       case WM_DESTROY:
