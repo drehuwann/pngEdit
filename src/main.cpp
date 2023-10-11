@@ -5,21 +5,16 @@
 #ifdef WIN32
 #include <tchar.h>
 #else   // WIN32
-class MyFrame; //Fwd declaration
-#define HWND MyFrame *
+//class MyFrame; //Fwd declaration
+//#define HWND MyFrame * => moved these 2 lines under defs.h
 #endif  // WIN32
-#include "model.h"
-#include "controller.h"
+//#include "model.h"
+//#include "controller.h"
+#include "defs.h"
+#include "engine.h"
 
-// Global variables
-struct s_engineRefs {
-   Model *m_model = nullptr;
-   HWND m_vue = nullptr;
-   Controller *m_controller = nullptr;
-} engine;
-
-// object to represent actualluy openned file
-PngFile *m_filePtr = nullptr;
+// object to represent running Engine
+Engine *engine = nullptr;
 
 //Common constants
 #define ID_Save 1
@@ -38,10 +33,28 @@ eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
 (See https://gnu.org/licenses/gpl.html)"
 
 // common functions
-s_engineRefs *InitEngine(HWND hWnd) {
-   engine.m_vue = hWnd;
-   if (!(engine.m_model = new Model()) || !(engine.m_controller = new Controller())) return nullptr;
-   return &engine;
+Engine *InitEngine(HWND hWnd) {
+   if (!hWnd) return nullptr;
+   Model *modl = new Model();
+   if (!modl) return nullptr;
+   Controller *ctrl = new Controller();
+   if (!ctrl) {
+      if (modl) delete modl;
+      return nullptr;
+   }
+   Engine *toRet = new Engine();
+   if (!toRet) {
+      if (ctrl) delete ctrl;
+      if (modl) delete modl;
+   } else {
+      if (toRet->Init(modl, (void *)hWnd, ctrl) != Error::NONE) {
+         if (ctrl) delete ctrl;
+         if (modl) delete modl;
+         delete toRet;
+         toRet = nullptr;         
+      }
+   }
+   return toRet;
 }
 
 
@@ -155,7 +168,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
          AppendMenu(hEdit, MF_STRING, ID_Redo, _T("Redo"));
          AppendMenu(hHelp, MF_STRING, ID_Apro, _T("A propos"));
          SetMenu(hWnd, hMenubar);
-         if (!InitEngine(hWnd)) return 1;
+         engine = InitEngine(hWnd);
+         if (!engine) return 1;
          break;
       }
       case WM_COMMAND: {
@@ -182,7 +196,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             // Display the Open dialog box.
             if (GetOpenFileName(&ofn)==TRUE) {
                const char *utfPath = ToCstr(ofn.lpstrFile);
-               engine.m_model->PickFile(utfPath);
+               Model *mod = engine->GetModel();
+               mod->PickFile(utfPath);
                if (utfPath && utfPath != (const char *)ofn.lpstrFile) {
                   delete utfPath;
                }

@@ -5,7 +5,8 @@
 #endif  // WIN32
 #include <cstdio>
 #include <bitset>
-#include "model.h"
+//#include "model.h"
+#include "engine.h"
 #include "defs.h"
 
 enum class ChunkType : int {
