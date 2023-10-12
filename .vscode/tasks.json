@@ -28,7 +28,7 @@
                 "problemMatcher": "$msCompile"
             },
             "linux": {
-                "command": "pushd ${workspaceFolder}/build; rm -r *; rm ../output/pngEditor; popd",
+                "command": "pushd ${workspaceFolder}/build; rm -r *; rm -r .*; git restore ./.gitignore; rm ../output/pngEditor; popd",
                 "problemMatcher": "$gcc"
             },
             "osx": {

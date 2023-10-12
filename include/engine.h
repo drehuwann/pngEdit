@@ -9,8 +9,9 @@
 #endif // POSIX  
 #endif  // WIN32
 #include "model.h"
-class Model; //fwd declaration
 #include "controller.h"
+class Model; //fwd declaration
+class Controller; //fwd declaration
 
 class Engine {
 public:

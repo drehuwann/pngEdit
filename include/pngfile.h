@@ -3,7 +3,8 @@
 #include "chunk.h"
 #include "utf4win.h"
 #include "defs.h"
-
+#include "model.h"
+class Model; //fwd decl
 #include <cstdio>
 #include <filesystem>
 #include <vector>
@@ -22,6 +23,8 @@ class PngFile {
 public:
     PngFile();
     ~PngFile();
+
+    Error SetModel(Model *mod);
 
     /**
      * @brief Opens file. If is is valid .png, loads it.
@@ -42,8 +45,8 @@ private:
     Error isPng();
 
     Error Load();
-    size_t Size();
 
     std::filesystem::path filepath;
     FILE *fileBuffer;
+    Model *model;
 };

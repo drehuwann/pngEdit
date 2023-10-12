@@ -197,7 +197,7 @@ Error ChunkPLTE::Read(void *data) {
     }
     UINT32 paletteSize = GetDataSize() / 3;
     if (GetDataSize() % 3) return Error::BADHEADER;
-    /*TODO access to imInfo from here (make model singleton and make model contain imInfo.)
+    /*TODO access to imInfo from here
     test paletteSize compatible with colour type and bitdepth
     */
     s_paletteEntry entryRead;

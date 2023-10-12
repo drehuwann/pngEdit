@@ -35,28 +35,34 @@ eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
 // common functions
 Engine *InitEngine(HWND hWnd) {
    if (!hWnd) return nullptr;
-   Model *modl = new Model();
-   if (!modl) return nullptr;
-   Controller *ctrl = new Controller();
-   if (!ctrl) {
-      if (modl) delete modl;
+   Engine *toRet = new Engine();
+   if (! toRet) return nullptr;
+   const Engine &eng_ref = *toRet;
+   Model *modl = new Model(eng_ref);
+   if (!modl) {
+      if (toRet) {
+         delete toRet;
+         toRet = nullptr;
+      }
       return nullptr;
    }
-   Engine *toRet = new Engine();
-   if (!toRet) {
+   Controller *ctrl = new Controller(eng_ref);
+   if (!ctrl) {
+      if (modl) delete modl;
+      if (toRet) {
+         delete toRet;
+         toRet = nullptr;
+      }
+      return nullptr;
+   }
+   if (toRet->Init(modl, (void *)hWnd, ctrl) != Error::NONE) {
       if (ctrl) delete ctrl;
       if (modl) delete modl;
-   } else {
-      if (toRet->Init(modl, (void *)hWnd, ctrl) != Error::NONE) {
-         if (ctrl) delete ctrl;
-         if (modl) delete modl;
-         delete toRet;
-         toRet = nullptr;         
-      }
+      delete toRet;
+      toRet = nullptr;         
    }
    return toRet;
 }
-
 
 #ifdef WIN32
 // The main window class name.
@@ -256,6 +262,11 @@ wxIMPLEMENT_APP(MyApp);
 bool MyApp::OnInit() {
    MyFrame *frame = new MyFrame();
    if (!frame) return false;
+   engine = InitEngine(frame);
+   if (!engine) {
+      if (frame) delete frame;
+      return false;
+   }
    frame->Show(true);
    return true;
 }
@@ -287,7 +298,6 @@ wxSize(SIZE_X, SIZE_Y)) {
    Bind(wxEVT_MENU, &MyFrame::OnRedo, this, ID_Redo);
    Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
    Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
-   InitEngine(this);
 }
  
 void MyFrame::OnExit(wxCommandEvent& event) {
@@ -316,7 +326,8 @@ void MyFrame::OnLoad(wxCommandEvent& event) {
    if (ofd.ShowModal() == wxID_CANCEL) return;
    wxString wxstr = ofd.GetPath();
    const char *utfPath = (const char *)(wxstr.fn_str());
-   engine.m_model->PickFile(utfPath);
+   Model *mod = engine->GetModel();
+   mod->PickFile(utfPath);
 }
 
 #else  // POSIX

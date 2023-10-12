@@ -11,7 +11,7 @@
 #define UINT16 uint16_t
 #define UINT32 uint32_t
 #define UINT64 uint64_t
-//TODO test this on linux
+
 class MyFrame; //Fwd declaration
 #define HWND MyFrame *
 

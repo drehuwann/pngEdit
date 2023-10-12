@@ -7,10 +7,17 @@ PngFile::PngFile() : filepath(), fileBuffer(nullptr) {
 PngFile::~PngFile() {
 }
 
+Error PngFile::SetModel(Model *mod) {
+    if (!mod) return Error::MEMORYERROR;
+    this->model = mod;
+    return Error::NONE;
+}
+
 SSIZE_T PngFile::Pick(const char *filename) {
     if (*filename == 0) return Error::NOFILENAME;
     filepath = std::filesystem::path(filename);
-    return (SSIZE_T)Load();
+    Error errCode = Load();
+    return (SSIZE_T)((errCode) ? errCode : std::filesystem::file_size(filepath));
 }
 
 Error PngFile::isPng() {
@@ -78,6 +85,10 @@ Error PngFile::Load() {
                 ChunkIHDR ch = ChunkIHDR(*chunk);
                 serData.data = malloc(sizeof(s_imInfo));
                 errCode = ch.Read(serData.data);
+                if (errCode == Error::NONE) {
+                    //moves the data into model
+                    model->SetInfo((s_imInfo *)(serData.data));
+                }
                 break;
             }
             case ChunkType::PLTE: {
@@ -120,5 +131,3 @@ Error PngFile::Load() {
     if (fclose(fileBuffer) == EOF) errCode = Error::FAILCLOSE;
     return errCode;
 }
-
-size_t PngFile::Size() {size_t size = 0; return size;}

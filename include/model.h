@@ -1,11 +1,14 @@
 #pragma once
 
 #include "defs.h"
+#include "engine.h"
 #include "pngfile.h"
-class PngFile;
+class Engine;   //fwd decl
+class PngFile;  //fwd decl
 
 struct s_imInfo {
-    s_imInfo() : width(0), height(0), colourTypeDepthFlag(0), interlace(false) {};
+    s_imInfo() : width(0), height(0), colourTypeDepthFlag(0),
+        interlace(false) {};
     UINT32 width;
     UINT32 height;
     union {
@@ -29,11 +32,16 @@ typedef s_paletteEntry* Palette;
 
 class Model {
 public:
-    Model();
+    Model(const Engine &eng);
     ~Model();
 
+    const Engine &GetEngine();
+    void SetInfo(s_imInfo *infoPtr);
     void PickFile(const char *path);
 
 private:
+    const Engine &eng;
     PngFile *m_file;
+    s_imInfo *m_info;
+    Palette pal;
 };
