@@ -36,7 +36,10 @@ public:
     ~Model();
 
     const Engine &GetEngine();
+    s_imInfo *GetInfo();
     void SetInfo(s_imInfo *infoPtr);
+    Palette GetPalette(Palette palette);
+    void SetPalette(Palette palette);
     void PickFile(const char *path);
 
 private:

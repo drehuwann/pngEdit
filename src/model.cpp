@@ -15,8 +15,20 @@ const Engine &Model::GetEngine() {
     return this->eng;
 }
 
+s_imInfo *Model::GetInfo() {
+    return this->m_info;
+}
+
 void Model::SetInfo(s_imInfo *infoPtr) {
     this->m_info = infoPtr;
+}
+
+Palette Model::GetPalette(Palette palette) {
+    return this->pal;
+}
+
+void Model::SetPalette(Palette palette) {
+    this->pal = palette;
 }
 
 void Model::PickFile(const char *path) {

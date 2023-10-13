@@ -16,21 +16,18 @@
 // object to represent running Engine
 Engine *engine = nullptr;
 
-//Common constants
-#define ID_Save 1
-#define ID_Load 2
-#define ID_Exit 3
-#define ID_Undo 4
-#define ID_Redo 5
-#define ID_Apro 6
+const char *colourStr[8] = {
+   "Greyscale",
+   "UNKNOWN !",
+   "Truecolour",
+   "Indexed-colour",
+   "Greyscale with alpha",
+   "UNKNOWN!",
+   "Truecolour with alpha",
+   "UNKNOWN!"
+};
 
-#define SIZE_X 500
-#define SIZE_Y 300
-#define aboutStr "\tpng Editor was initially a quick home made tool to work on small \
-16*16 icons defined in png files.\r\nIt growed becoming a tool to check \
-eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
-\r\nPublished under the terms of the General Public License.\r\n\
-(See https://gnu.org/licenses/gpl.html)"
+const char *interlaceStr[2] = {"No interlace", "Adam 7"};
 
 // common functions
 Engine *InitEngine(HWND hWnd) {
@@ -169,10 +166,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
          AppendMenu(hFile, MF_STRING, ID_Save, _T("Save"));
          AppendMenu(hFile, MF_STRING, ID_Load, _T("Open"));
          AppendMenu(hFile, MF_SEPARATOR, 0, 0);
+         AppendMenu(hFile, MF_STRING, ID_Save, _T("Show Info"));
+         AppendMenu(hFile, MF_STRING, ID_Load, _T("Show Layout"));
+         AppendMenu(hFile, MF_SEPARATOR, 0, 0);
          AppendMenu(hFile, MF_STRING, ID_Exit, _T("Exit"));
          AppendMenu(hEdit, MF_STRING, ID_Undo, _T("Undo"));
          AppendMenu(hEdit, MF_STRING, ID_Redo, _T("Redo"));
-         AppendMenu(hHelp, MF_STRING, ID_Apro, _T("A propos"));
+         AppendMenu(hHelp, MF_STRING, ID_Abou, _T("About"));
          SetMenu(hWnd, hMenubar);
          engine = InitEngine(hWnd);
          if (!engine) return 1;
@@ -210,13 +210,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             }
             break;
          }
+         if (LOWORD(wParam) == ID_Info) {}
+         if (LOWORD(wParam) == ID_Layo) {}
          if (LOWORD(wParam) == ID_Exit) {
             PostQuitMessage(0);
             exit(0);
          }
          if (LOWORD(wParam) == ID_Undo) {}
          if (LOWORD(wParam) == ID_Redo) {}
-         if (LOWORD(wParam) == ID_Apro) {
+         if (LOWORD(wParam) == ID_Abou) {
             About(hWnd);
             break;
          }
@@ -251,6 +253,8 @@ public:
 private:
    void OnSave(wxCommandEvent& event);
    void OnLoad(wxCommandEvent& event);
+   void OnInfo(wxCommandEvent& event);
+   void OnLayo(wxCommandEvent& event);
    void OnExit(wxCommandEvent& event);
    void OnUndo(wxCommandEvent& event);
    void OnRedo(wxCommandEvent& event);
@@ -278,6 +282,10 @@ wxSize(SIZE_X, SIZE_Y)) {
             "Save current work as <fileneme>.sav");
    menuFile->Append(ID_Load, "&Open\tCtrl-O", "Loads a png file to work on");
    menuFile->AppendSeparator();
+   menuFile->Append(ID_Info, "&Info\tCtrl-I",
+            "Show image Info");
+   menuFile->Append(ID_Layo, "&Layout\tCtrl-L", "Show chunk layout");
+   menuFile->AppendSeparator();
    menuFile->Append(wxID_EXIT);
    wxMenu *menuEdit = new wxMenu;
    menuEdit->Append(ID_Undo, "&Undo\tCtrl-Z", "Undo last operation on image");
@@ -294,29 +302,15 @@ wxSize(SIZE_X, SIZE_Y)) {
    SetStatusText("Welcome to pngEditor!");
    Bind(wxEVT_MENU, &MyFrame::OnSave, this, ID_Save);
    Bind(wxEVT_MENU, &MyFrame::OnLoad, this, ID_Load);
+   Bind(wxEVT_MENU, &MyFrame::OnInfo, this, ID_Info);
+   Bind(wxEVT_MENU, &MyFrame::OnLayo, this, ID_Layo);
    Bind(wxEVT_MENU, &MyFrame::OnUndo, this, ID_Undo);
    Bind(wxEVT_MENU, &MyFrame::OnRedo, this, ID_Redo);
    Bind(wxEVT_MENU, &MyFrame::OnAbout, this, wxID_ABOUT);
    Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
 }
  
-void MyFrame::OnExit(wxCommandEvent& event) {
-   Close(true);
-}
- 
-void MyFrame::OnAbout(wxCommandEvent& event) {
-   wxMessageBox(aboutStr, "About", wxOK | wxICON_INFORMATION);
-}
-
 void MyFrame::OnSave(wxCommandEvent& event) {
-   wxLogMessage("TODO");
-}
-
-void MyFrame::OnUndo(wxCommandEvent& event) {
-   wxLogMessage("TODO");
-}
-
-void MyFrame::OnRedo(wxCommandEvent& event) {
    wxLogMessage("TODO");
 }
 
@@ -328,6 +322,42 @@ void MyFrame::OnLoad(wxCommandEvent& event) {
    const char *utfPath = (const char *)(wxstr.fn_str());
    Model *mod = engine->GetModel();
    mod->PickFile(utfPath);
+}
+
+void MyFrame::OnInfo(wxCommandEvent &event) {
+   s_imInfo *inf = engine->GetModel()->GetInfo();
+   if (inf == nullptr) {
+      wxMessageBox("There is no image info available.\nDid you load a valid \
+*.png file before querying info ?", "WARNING", wxOK | wxICON_WARNING, this);
+   } else {
+      const char *colstr = colourStr[inf->bitfield.colourType.to_ulong()];
+      const char *intstr = interlaceStr[(inf->interlace ? 1 : 0)];
+      ulong bd = inf->bitfield.bitDepth.to_ulong();
+      UINT32 w = inf->width;
+      UINT32 h = inf->height;
+      int size = std::snprintf(nullptr, 0, infoStr, w, h, colstr, bd, intstr);
+      char str[size + 1]; // +1 for null termination.
+      std::sprintf(str, infoStr, w, h, colstr, bd, intstr);
+      wxMessageBox(str, "image Info", wxOK | wxICON_INFORMATION, this);
+   }
+}
+
+void MyFrame::OnLayo(wxCommandEvent &event) {
+}
+ 
+void MyFrame::OnExit(wxCommandEvent& event) {
+   Close(true);
+}
+void MyFrame::OnUndo(wxCommandEvent& event) {
+   wxLogMessage("TODO");
+}
+
+void MyFrame::OnRedo(wxCommandEvent& event) {
+   wxLogMessage("TODO");
+}
+
+void MyFrame::OnAbout(wxCommandEvent& event) {
+   wxMessageBox(aboutStr, "About", wxOK | wxICON_INFORMATION, this);
 }
 
 #else  // POSIX
