@@ -17,4 +17,21 @@ const char *ToCstr(LPCTSTR tStr) {
    wcstombs_s(&outSize, toRet, outSize, tStr, inSize);
    return (const char *)toRet;
 }
+
+/**
+ * @brief Converts securely cstring to tchar.
+ * If (FromCstr(in) != in), you should delete the new returned pointer after use.
+ * @return tStr if _UNICODE is not defined. else returns a new const wchar* from const char *entry
+ */
+LPCTSTR FromCstr(const char *tStr) {
+   if (sizeof(TCHAR) == sizeof(char)) {
+      return (LPCTSTR)tStr;
+   }
+   size_t inSize = strlen(tStr);
+   size_t outSize;
+   mbstowcs_s(&outSize, nullptr, 0, tStr, inSize);
+   LPTSTR toRet = new TCHAR[outSize];
+   mbstowcs_s(&outSize, toRet, outSize, tStr, inSize);
+   return (LPCTSTR)toRet;
+}
 #endif  // WIN32

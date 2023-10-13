@@ -47,8 +47,13 @@ Error PngFile::isPng() {
 
 Error PngFile::Load() {
 #ifdef WIN32
-    if (!(fileBuffer = fopen(ToCstr((LPCTSTR)(filepath.c_str())), "rb"))) {
+    LPCTSTR inStr = (LPCTSTR)(filepath.c_str());
+    const char *cStr = ToCstr(inStr);
+    if (!(fileBuffer = fopen(cStr, "rb"))) {
         return Error::FAILOPEN;
+    }
+    if (cStr && cStr != (const char *)(inStr)) {
+        delete cStr;
     }
 #else
 #ifdef POSIX

@@ -166,8 +166,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
          AppendMenu(hFile, MF_STRING, ID_Save, _T("Save"));
          AppendMenu(hFile, MF_STRING, ID_Load, _T("Open"));
          AppendMenu(hFile, MF_SEPARATOR, 0, 0);
-         AppendMenu(hFile, MF_STRING, ID_Save, _T("Show Info"));
-         AppendMenu(hFile, MF_STRING, ID_Load, _T("Show Layout"));
+         AppendMenu(hFile, MF_STRING, ID_Info, _T("Show Info"));
+         AppendMenu(hFile, MF_STRING, ID_Layo, _T("Show Layout"));
          AppendMenu(hFile, MF_SEPARATOR, 0, 0);
          AppendMenu(hFile, MF_STRING, ID_Exit, _T("Exit"));
          AppendMenu(hEdit, MF_STRING, ID_Undo, _T("Undo"));
@@ -210,7 +210,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             }
             break;
          }
-         if (LOWORD(wParam) == ID_Info) {}
+         if (LOWORD(wParam) == ID_Info) {
+            s_imInfo *inf = engine->GetModel()->GetInfo();
+            if (inf == nullptr) {
+               MessageBox(NULL, _T("There is no image info available.\nDid you load a valid \
+*.png file before querying info ?"), _T("WARNING"), 0);
+            } else {
+               const char *colstr = colourStr[inf->bitfield.colourType.to_ulong()];
+               const char *intstr = interlaceStr[(inf->interlace ? 1 : 0)];
+               unsigned long bd = inf->bitfield.bitDepth.to_ulong();
+               UINT32 w = inf->width;
+               UINT32 h = inf->height;
+               int size = std::snprintf(nullptr, 0, infoStr, w, h, colstr, bd, intstr);
+               size ++; // +1 for null termination.
+               char *str = (char *)(malloc((size_t)size));
+               std::sprintf(str, infoStr, w, h, colstr, bd, intstr);
+               LPCTSTR tstr = FromCstr((const char *)str);
+               MessageBox(NULL, tstr, _T("image Info"), 0);
+               if (tstr && tstr != (LPCTSTR)str) {
+                  delete tstr;
+               }
+               if (str) delete str;
+            }
+         }
          if (LOWORD(wParam) == ID_Layo) {}
          if (LOWORD(wParam) == ID_Exit) {
             PostQuitMessage(0);

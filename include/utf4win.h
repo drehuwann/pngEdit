@@ -5,4 +5,5 @@
 #include <windows.h>
 
 const char *ToCstr(LPCTSTR tStr);
+LPCTSTR FromCstr(const char *tStr);
 #endif  // WIN32
