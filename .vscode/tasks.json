@@ -10,14 +10,14 @@
             "type": "shell",
             "windows": {
                 "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build .; cd src; cp Debug/pngEditor.exe ../../output; cd ../../.vscode; cp launchWin.json launch.json; popd",
-                "problemMatcher": "$msCompile"    
+                "problemMatcher": "$msCompile"
             },
             "linux": {
                 "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build .; cd src; cp pngEditor ../../output;  cd ../../.vscode; ln -sf ./launchLin.json launch.json; popd",
-                "problemMatcher": "$gcc"    
+                "problemMatcher": "$gcc"
             },
             "osx": {
-                "command": "echo osx not implemented yet",
+                "command": "echo osx not implemented yet"
             }
         },
         {
@@ -32,8 +32,18 @@
                 "problemMatcher": "$gcc"
             },
             "osx": {
-                "command": "echo osx not implemented yet",
-            }            
+                "command": "echo osx not implemented yet"
+            }
+        },
+        {
+            "label": "objdump",
+            "type": "shell",
+            "linux": {
+                "command": "pushd ${workspaceFolder}/build/src/CMakeFiles/pngEditor.dir; objdump -Dj .text --visualize-jumps=color --disassembler-color=on -M intel ${fileBasenameNoExtension}.cpp.o | less -R; popd"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }

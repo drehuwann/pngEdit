@@ -74,7 +74,7 @@ Error PngFile::Load() {
     // Now parse chunks : 
     //TODO make a vector
     while (errCode == Error::NONE) {
-        ChunkUnknown *chunk = new ChunkUnknown(fileBuffer);
+        ChunkUnknown *chunk = new ChunkUnknown(fileBuffer, this->model);
         if (!chunk) return Error::MEMORYERROR;
         errCode = chunk->Init();
         if (errCode != Error::NONE) {
@@ -103,6 +103,17 @@ Error PngFile::Load() {
                     errCode = Error::BADHEADER;
                 } else {
                     serData.data = malloc(sizeof(s_paletteEntry) * paletteSize);
+                    errCode = ch.Read(serData.data);
+                }
+                break;
+            }
+            case ChunkType::IDAT: {
+                ChunkIDAT ch = ChunkIDAT(*chunk);
+                UINT16 zHeader = ch.GetDataSize() / 3;
+                if (ch.GetDataSize() % 3) {
+                    errCode = Error::BADHEADER;
+                } else {
+                    serData.data = malloc((size_t)(ch.GetDataSize()));
                     errCode = ch.Read(serData.data);
                 }
                 break;

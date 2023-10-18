@@ -1,6 +1,18 @@
 #include "chunk.h"
 #include "htonntoh.h"
 
+Chunk::~Chunk() {
+    if (crcString) free(crcString);
+    crcString = nullptr;
+    if (this->isInitialized) {
+        this->model->SetChunksHead(this->previous);
+    } else {
+        // TODO Free there what must be, then cleanly resume:
+        // TODO valgrind me!
+        // TODO make this house of in-memory cards clean & robust #!
+    }
+}
+
 bool Chunk::TestCRC() {
     ComputeCRC();
     return (calcCRC == readCRC);
@@ -45,10 +57,19 @@ void Chunk::ComputeCRC()  {
         c = crc_table[(c ^ buf[n]) & 0xff] ^ (c >> 8);
     }
     calcCRC = (UINT32)(c ^ 0xffffffffL);
+}
+
+Chunk *Chunk::GetPrevious() {
+    return this->previous;
+}
+
+void Chunk::SetPrevious(Chunk *prev) {
+    this->previous = prev;
 };
 
 Error Chunk::Init() {
     if (crcString) return Error::OTHER; // We shouldn't alloc again crcString !
+    if (this->model == nullptr) return Error::MEMORYERROR; //elementary security
     UINT32 uintBuf = 0;
     if (!std::fread(&uintBuf, sizeof(uintBuf), 1, file)) return Error::FAILREAD;
     size = ntoh(uintBuf);
@@ -82,37 +103,40 @@ Error Chunk::Init() {
 };
 
 Error ChunkUnknown::Read(void *data) {
-    if (!data) {
-        return Error::MEMORYERROR;
-    }
-    //TODO : popup modal to Ask Load or Ignore this chunk
-    unsigned char *buf = (unsigned char *)crcString;
+    Chunk *headChunk = this->model->GetChunksHead();
+    if (!data) return Error::MEMORYERROR;
+    if (!headChunk) return Error::BADHEADER;
+    
     if (!isInitialized) return Error::NOTINITIALIZED;
+
+    //TODO : popup modal to Ask Load or Ignore this chunk
+    this->model->SetChunksHead(this);
+    unsigned char *buf = (unsigned char *)crcString;
     buf += 4; // jump over 'type' field
     buf += this->size; // Actually don't read
+    this->SetPrevious(headChunk);
+    this->model->SetChunksHead(this);
     return Error::NONE;
 }
 
 Error ChunkIHDR::Read(void *data) {
-    if (!data) {
-        return Error::MEMORYERROR;
-    }
+    if (!data) return Error::MEMORYERROR;
     s_imInfo *imInfo = (s_imInfo *)data;
     static int numHeaders = 0;
     if (numHeaders != 0) {
         return Error::BADHEADER; // not unique
     }
-    ++ numHeaders;
     if (!isInitialized) {
         return Error::NOTINITIALIZED;
     }
     if (size != 13) {
         return Error::BADHEADER;
     }
-    UINT32 intRead = 0;
+    Chunk *headChunk = this->model->GetChunksHead();
+    if (headChunk) return Error::IHDRNOTFIRST;
     unsigned char *buf = (unsigned char *)crcString;
     buf += 4; // jump over 'type' field
-    intRead = ntoh(*((UINT32 *)buf));  // width
+    UINT32 intRead = ntoh(*((UINT32 *)buf));  // width
     buf += 4;
     if (intRead != 0) {
         imInfo->width = intRead;
@@ -179,22 +203,20 @@ Error ChunkIHDR::Read(void *data) {
         return Error::BADHEADER;
     }
     imInfo->interlace = (byteRead == 1);
+    ++ numHeaders;
+    this->SetPrevious(nullptr);
+    this->model->SetChunksHead(this);
     return Error::NONE;
 }
 
 Error ChunkPLTE::Read(void *data) {
-    if (!data) {
-        return Error::MEMORYERROR;
-    }
+    if (!data) return Error::MEMORYERROR;
+    Chunk *headChunk = this->model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER;
     s_paletteEntry *palEntry = (s_paletteEntry *)data;
-    static int numHeaders = 0;
-    if (numHeaders != 0) {
-        return Error::BADHEADER; // not unique
-    }
-    ++ numHeaders;
-    if (!isInitialized) {
-        return Error::NOTINITIALIZED;
-    }
+    static int numPalettes = 0;
+    if (numPalettes != 0) return Error::CHUNKNOTUNIQUE;
+    if (!isInitialized) return Error::NOTINITIALIZED;
     UINT32 paletteSize = GetDataSize() / 3;
     if (GetDataSize() % 3) return Error::BADHEADER;
     /*TODO access to imInfo from here
@@ -210,23 +232,57 @@ Error ChunkPLTE::Read(void *data) {
         ++palEntry;
         --paletteSize;
     }
+    ++ numPalettes;
+    this->model->SetChunksHead(this);
+    this->SetPrevious(headChunk);
     return Error::NONE;
 }
 
 Error ChunkIDAT::Read(void *data) {
-    if (!data) {
-        return Error::MEMORYERROR;
+    if (!data) return Error::MEMORYERROR;
+    static int numIDAT = 0;
+    Chunk *headChunk = this->model->GetChunksHead();
+    if (numIDAT != 0) {
+        Chunk *prev = headChunk;
+        if (!prev) return Error::OTHER; //It should not happen
+        if (prev->GetType() != ChunkType::IDAT)
+            return Error::IDATNOTCONSECUTIVE;
     }
     if (!isInitialized) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
+    ++ numIDAT;
+    this->SetPrevious(headChunk);
+    this->model->SetChunksHead(this);
     return Error::NONE;
 }
 
 Error ChunkIEND::Read(void *data) {
     if (!data) return Error::MEMORYERROR;
     if (!isInitialized) return Error::NOTINITIALIZED;
+    Chunk *headChunk = this->model->GetChunksHead();
+    this->SetPrevious(headChunk);
+    headChunk = this;
     return Error::IENDREACHED;
 }
+
+/* Default template for Read() methods
+
+Error ChunkAAAA::Read(void *data) {
+    if (!data) return Error::MEMORYERROR;
+    if (!isInitialized) return Error::NOTINITIALIZED;
+// Do tests here
+    ...
+// on tests success, do allocations, reading, interpretations...    
+    T *buf = (T *)crcString;
+    buf += 4; // jump over 'type' field
+    ...
+// finally update linked list and return 0.
+    this->SetPrevious(headChunk);
+    headChunk = this;
+    return Error::NONE;
+}
+
+*/
 
 /*void* cb_cHRM(Error &errCode, Chunk *parent) {return nullptr;}
 void* cb_gAMA(Error &errCode, Chunk *parent) {return nullptr;}

@@ -47,17 +47,21 @@ enum Error : SSIZE_T {
     FAILREAD = -3,
     FAILWRITE = -4,
     BADHEADER = -5,
-    BADFOOTER = -6,
-    BADSIGNATURE = -7,
-    UNEXPECTEDEOF = -8,
-    MEMORYERROR = -9,
-    BADCRC = -10,
-    FILECLOSED = -11,
-    FAILSEEK = -12,
-    FAILCLOSE = -13,
-    NOTINITIALIZED = -14,
-    IENDREACHED = -15,
-    OTHER = -16
+    IHDRNOTFIRST = -6,
+    BADFOOTER = -7,
+    BADSIGNATURE = -8,
+    UNEXPECTEDEOF = -9,
+    MEMORYERROR = -10,
+    BADCRC = -11,
+    FILECLOSED = -12,
+    FAILSEEK = -13,
+    FAILCLOSE = -14,
+    NOTINITIALIZED = -15,
+    CHUNKNOTUNIQUE = -16,
+    IDATNOTCONSECUTIVE = -17,
+    IENDREACHED = -18,
+    NOIMGINFO = -19,
+    OTHER = -20
 };
 
 #define BREAKPOINT __asm { int 3; }

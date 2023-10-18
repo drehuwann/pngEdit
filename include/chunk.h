@@ -3,13 +3,15 @@
 #ifdef WIN32
 #include <basetsd.h>
 #endif  // WIN32
+#include "ztools.h"
 #include <cstdio>
 #include <bitset>
-//#include "model.h"
 #include "engine.h"
 #include "defs.h"
+#include "model.h"
+class Model;
 
-enum class ChunkType : int {
+ enum class ChunkType : int {
     Unknown, // unrecognized chunk type.
 
     //Critical chunks (must appear in this order, except PLTE is optional):
@@ -94,7 +96,9 @@ const ReadFn fnArray[TAGS_ARRAY_SIZE] = {nullptr, cb_IHDR, cb_PLTE, cb_IDAT, cb_
 
 class Chunk {
 public:
-    Chunk(FILE *fileSeek) : crcString(nullptr),
+    Chunk(FILE *fileSeek, Model *mod) :
+                            model(mod),
+                            crcString(nullptr),
                             size(0),
                             readCRC(0),
                             calcCRC(0),
@@ -102,7 +106,9 @@ public:
                             file(fileSeek),
                             isInitialized(false) {};
 
-    Chunk(const Chunk &c) : crcString(c.crcString),
+    Chunk(const Chunk &c) : 
+                            model(c.model),
+                            crcString(c.crcString),
                             size(c.size),
                             readCRC(c.readCRC),
                             calcCRC(c.calcCRC),
@@ -110,10 +116,8 @@ public:
                             file(c.file),
                             isInitialized(c.isInitialized) {};
 
-    virtual ~Chunk() {
-        if (crcString) free(crcString);
-        crcString = nullptr;
-    };
+    /// @brief checks this->isInitialized, and free resources accordingly
+    virtual ~Chunk();
     
     ChunkType GetType() {
         return m_type;
@@ -134,17 +138,21 @@ public:
     virtual Error Read(void *data) = 0;
 
 protected:
+    Model *model;
+    Chunk *previous;
     unsigned char *crcString;
     UINT32 size;
     bool isInitialized;
     bool TestCRC();
     void ComputeCRC();
+    Chunk *GetPrevious();
+    void SetPrevious(Chunk *prev);
 
 private:
+    FILE *file;
     UINT32 readCRC;
     UINT32 calcCRC;
     ChunkType m_type;
-    FILE *file;
 };
 
 class ChunkUnknown : public Chunk {
