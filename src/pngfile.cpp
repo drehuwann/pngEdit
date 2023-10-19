@@ -17,7 +17,7 @@ SSIZE_T PngFile::Pick(const char *filename) {
     if (*filename == 0) return Error::NOFILENAME;
     filepath = std::filesystem::path(filename);
     Error errCode = Load();
-    return (SSIZE_T)((errCode) ? errCode : std::filesystem::file_size(filepath));
+    return (errCode != Error::NONE) ? (SSIZE_T)errCode : std::filesystem::file_size(filepath);
 }
 
 Error PngFile::isPng() {
@@ -74,7 +74,7 @@ Error PngFile::Load() {
     // Now parse chunks : 
     //TODO make a vector
     while (errCode == Error::NONE) {
-        ChunkUnknown *chunk = new ChunkUnknown(fileBuffer, this->model);
+        Chunk *chunk = new Chunk(fileBuffer, this->model);
         if (!chunk) return Error::MEMORYERROR;
         errCode = chunk->Init();
         if (errCode != Error::NONE) {
@@ -87,9 +87,8 @@ Error PngFile::Load() {
         serData.type = type;
         switch (type) {
             case ChunkType::IHDR: {
-                ChunkIHDR ch = ChunkIHDR(*chunk);
                 serData.data = malloc(sizeof(s_imInfo));
-                errCode = ch.Read(serData.data);
+                errCode = chunk->Read(serData.data);
                 if (errCode == Error::NONE) {
                     //moves the data into model
                     model->SetInfo((s_imInfo *)(serData.data));
@@ -97,40 +96,41 @@ Error PngFile::Load() {
                 break;
             }
             case ChunkType::PLTE: {
-                ChunkPLTE ch = ChunkPLTE(*chunk);
-                UINT32 paletteSize = ch.GetDataSize() / 3;
-                if (ch.GetDataSize() % 3) {
+                UINT32 size = chunk->GetDataSize();
+                UINT32 paletteSize = size / 3;
+                if (size % 3) {
                     errCode = Error::BADHEADER;
                 } else {
                     serData.data = malloc(sizeof(s_paletteEntry) * paletteSize);
-                    errCode = ch.Read(serData.data);
+                    errCode = chunk->Read(serData.data);
+                    //TODO moves to model
                 }
                 break;
             }
             case ChunkType::IDAT: {
-                ChunkIDAT ch = ChunkIDAT(*chunk);
-                UINT16 zHeader = ch.GetDataSize() / 3;
-                if (ch.GetDataSize() % 3) {
-                    errCode = Error::BADHEADER;
+                static size_t previousSize = 0;
+                static void *data = nullptr;
+                UINT32 size = chunk->GetDataSize();
+                if (size == 0) {
+                    errCode = Error::IDATEMPTY;
                 } else {
-                    serData.data = malloc((size_t)(ch.GetDataSize()));
-                    errCode = ch.Read(serData.data);
+                    data = realloc(data, previousSize + size);
+                    errCode = chunk->Read((char *)data + size);
+                    if (errCode != Error::NONE) serData.data = data;
                 }
                 break;
             }
             case ChunkType::IEND: {
-                ChunkIEND ch = ChunkIEND(*chunk);
-                if (ch.GetDataSize()) {
+                if (chunk->GetDataSize()) {
                     errCode = Error::BADFOOTER;
                 } else {
-                    errCode = Error::IENDREACHED;
+                    errCode = Error::IENDREACHED; // Normal termination
                 }
                 break;
             }
             default: {
-                ChunkUnknown ch = ChunkUnknown(*chunk);
-                serData.data = malloc(ch.GetDataSize());
-                errCode = ch.Read(serData.data);
+                serData.data = malloc(chunk->GetDataSize());
+                errCode = chunk->Read(serData.data);
                 break;
             }
         }

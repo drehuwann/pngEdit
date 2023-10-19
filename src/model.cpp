@@ -11,8 +11,9 @@ static size_t Ceil(const size_t num, const size_t den) {
     return res;
 }
 
-Model::Model(const Engine &engine) : eng(engine), m_info(nullptr),
-        inflateBuffer(nullptr), pal(nullptr), pixelBinarySize(0) {
+Model::Model(Engine *engine) : eng(engine), headChunk(nullptr),
+        m_file(nullptr), m_info(nullptr), inflateBuffer(nullptr), pal(nullptr), 
+        pixelBinarySize(0) {
     m_file = new PngFile();
 }
 
@@ -27,7 +28,7 @@ Model::~Model() {
     pal = nullptr;
 }
 
-const Engine &Model::GetEngine() {
+Engine *Model::GetEngine() {
     return this->eng;
 }
 

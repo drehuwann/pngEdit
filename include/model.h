@@ -35,10 +35,10 @@ typedef s_paletteEntry* Palette;
 
 class Model {
 public:
-    Model(const Engine &eng);
+    Model(Engine *eng);
     ~Model();
 
-    const Engine &GetEngine();
+    Engine *GetEngine();
     s_imInfo *GetInfo();
     void SetInfo(s_imInfo *infoPtr);
 
@@ -55,7 +55,7 @@ public:
 private:
     Error ReserveInflateBuffer();
 
-    const Engine &eng;
+    Engine *eng;
 
     /// @brief keep track of the last read chunk.
     /// Use it to free chunk linked list : while(headChunk) delete headChunk;

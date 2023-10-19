@@ -4,11 +4,11 @@
 class Engine; // fwd decl
 class Controller {
 public:
-    Controller(const Engine &engine);
+    Controller(Engine *engine);
     ~Controller();
 
-    const Engine &GetEngine();
+    Engine *GetEngine();
 
 private:
-    const Engine &eng;
+    Engine *eng;
 };

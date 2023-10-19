@@ -34,8 +34,7 @@ Engine *InitEngine(HWND hWnd) {
    if (!hWnd) return nullptr;
    Engine *toRet = new Engine();
    if (! toRet) return nullptr;
-   const Engine &eng_ref = *toRet;
-   Model *modl = new Model(eng_ref);
+   Model *modl = new Model(toRet);
    if (!modl) {
       if (toRet) {
          delete toRet;
@@ -43,7 +42,7 @@ Engine *InitEngine(HWND hWnd) {
       }
       return nullptr;
    }
-   Controller *ctrl = new Controller(eng_ref);
+   Controller *ctrl = new Controller(toRet);
    if (!ctrl) {
       if (modl) delete modl;
       if (toRet) {
@@ -332,11 +331,11 @@ wxSize(SIZE_X, SIZE_Y)) {
    Bind(wxEVT_MENU, &MyFrame::OnExit, this, wxID_EXIT);
 }
  
-void MyFrame::OnSave(wxCommandEvent& event) {
+void MyFrame::OnSave(wxCommandEvent &/*event*/) {
    wxLogMessage("TODO");
 }
 
-void MyFrame::OnLoad(wxCommandEvent& event) {
+void MyFrame::OnLoad(wxCommandEvent &/*event*/) {
    wxFileDialog ofd(this, _("Open PNG file"), "", "",
          "PNG files (*.png)|*.png", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
    if (ofd.ShowModal() == wxID_CANCEL) return;
@@ -346,7 +345,7 @@ void MyFrame::OnLoad(wxCommandEvent& event) {
    mod->PickFile(utfPath);
 }
 
-void MyFrame::OnInfo(wxCommandEvent &event) {
+void MyFrame::OnInfo(wxCommandEvent &/*event*/) {
    s_imInfo *inf = engine->GetModel()->GetInfo();
    if (inf == nullptr) {
       wxMessageBox("There is no image info available.\nDid you load a valid \
@@ -364,21 +363,21 @@ void MyFrame::OnInfo(wxCommandEvent &event) {
    }
 }
 
-void MyFrame::OnLayo(wxCommandEvent &event) {
+void MyFrame::OnLayo(wxCommandEvent &/*event*/) {
 }
  
-void MyFrame::OnExit(wxCommandEvent& event) {
+void MyFrame::OnExit(wxCommandEvent &/*event*/) {
    Close(true);
 }
-void MyFrame::OnUndo(wxCommandEvent& event) {
+void MyFrame::OnUndo(wxCommandEvent &/*event*/) {
    wxLogMessage("TODO");
 }
 
-void MyFrame::OnRedo(wxCommandEvent& event) {
+void MyFrame::OnRedo(wxCommandEvent &/*event*/) {
    wxLogMessage("TODO");
 }
 
-void MyFrame::OnAbout(wxCommandEvent& event) {
+void MyFrame::OnAbout(wxCommandEvent &/*event*/) {
    wxMessageBox(aboutStr, "About", wxOK | wxICON_INFORMATION, this);
 }
 

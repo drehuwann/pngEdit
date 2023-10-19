@@ -53,15 +53,16 @@ enum Error : SSIZE_T {
     UNEXPECTEDEOF = -9,
     MEMORYERROR = -10,
     BADCRC = -11,
-    FILECLOSED = -12,
+    BADPALETTE = -12,
     FAILSEEK = -13,
     FAILCLOSE = -14,
     NOTINITIALIZED = -15,
     CHUNKNOTUNIQUE = -16,
     IDATNOTCONSECUTIVE = -17,
-    IENDREACHED = -18,
-    NOIMGINFO = -19,
-    OTHER = -20
+    IDATEMPTY = -18,
+    IENDREACHED = -19,
+    NOIMGINFO = -20,
+    OTHER = -21
 };
 
 #define BREAKPOINT __asm { int 3; }

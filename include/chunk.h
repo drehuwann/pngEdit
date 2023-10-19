@@ -11,7 +11,7 @@
 #include "model.h"
 class Model;
 
- enum class ChunkType : int {
+enum class ChunkType : int {
     Unknown, // unrecognized chunk type.
 
     //Critical chunks (must appear in this order, except PLTE is optional):
@@ -47,74 +47,79 @@ class Model;
     sTER, //    Unique      Before IDAT
     dSIG, //    Multiple    In pairs, immediately after IHDR and before IEND
     eXIf, //    Unique      None
-    fRAc  //    Multiple    None
+    fRAc, //    Multiple    None
+
+    /// @brief should be casted to int to reflect the number of ChunkTypes.
+    TAGS_ARRAY_SIZE
 };
 
-#define TAGS_ARRAY_SIZE 29
+const char typeTag[(int)(ChunkType::TAGS_ARRAY_SIZE)][4] = {"\0\0\0",
+    {'I','H','D','R'}, {'P','L','T','E'}, {'I','D','A','T'}, {'I','E','N','D'},
+    {'c','H','R','M'}, {'g','A','M','A'}, {'i','C','C','P'}, {'s','B','I','T'},
+    {'s','R','G','B'}, {'b','K','G','D'}, {'h','I','S','T'}, {'t','R','N','S'},
+    {'p','H','Y','s'}, {'s','P','L','T'}, {'t','I','M','E'}, {'i','T','X','t'},
+    {'t','E','X','t'}, {'z','T','X','t'}, {'o','F','F','s'}, {'p','C','A','L'},
+    {'s','C','A','L'}, {'g','I','F','g'}, {'g','I','F','t'}, {'g','I','F','x'},
+    {'s','T','E','R'}, {'d','S','I','G'}, {'e','X','I','f'}, {'f','R','A','c'}
+};
 
-const char typeTag[TAGS_ARRAY_SIZE][4] = {"\0\0\0", {'I','H','D','R'}, {'P','L','T','E'}, {'I','D','A','T'}, {'I','E','N','D'}, {'c','H','R','M'},
-                            {'g','A','M','A'}, {'i','C','C','P'}, {'s','B','I','T'}, {'s','R','G','B'}, {'b','K','G','D'},
-                            {'h','I','S','T'}, {'t','R','N','S'}, {'p','H','Y','s'}, {'s','P','L','T'}, {'t','I','M','E'}, {'i','T','X','t'},
-                            {'t','E','X','t'}, {'z','T','X','t'}, {'o','F','F','s'}, {'p','C','A','L'}, {'s','C','A','L'}, {'g','I','F','g'},
-                            {'g','I','F','t'}, {'g','I','F','x'}, {'s','T','E','R'}, {'d','S','I','G'}, {'e','X','I','f'}, {'f','R','A','c'}};
+class Chunk;
+typedef Error(*cbRead)(void *data, Chunk *owner);
 
-
-/*void *cb_IHDR(FileError &errCode, Chunk *parent);
-void *cb_PLTE(FileError &errCode, Chunk *parent);
-void *cb_IDAT(FileError &errCode, Chunk *parent);
-void *cb_IEND(FileError &errCode, Chunk *parent);
-void *cb_cHRM(FileError &errCode, Chunk *parent);
-void *cb_gAMA(FileError &errCode, Chunk *parent);
-void *cb_iCCP(FileError &errCode, Chunk *parent);
-void *cb_sBIT(FileError &errCode, Chunk *parent);
-void *cb_sRGB(FileError &errCode, Chunk *parent);
-void *cb_bKGD(FileError &errCode, Chunk *parent);
-void *cb_hIST(FileError &errCode, Chunk *parent);
-void *cb_tRNS(FileError &errCode, Chunk *parent);
-void *cb_pHYs(FileError &errCode, Chunk *parent);
-void *cb_sPLT(FileError &errCode, Chunk *parent);
-void *cb_tIME(FileError &errCode, Chunk *parent);
-void *cb_iTXt(FileError &errCode, Chunk *parent);
-void *cb_tEXt(FileError &errCode, Chunk *parent);
-void *cb_zTXt(FileError &errCode, Chunk *parent);
-void *cb_oFFs(FileError &errCode, Chunk *parent);
-void *cb_pCAL(FileError &errCode, Chunk *parent);
-void *cb_sCAL(FileError &errCode, Chunk *parent);
-void *cb_gIFg(FileError &errCode, Chunk *parent);
-void *cb_gIFt(FileError &errCode, Chunk *parent);
-void *cb_gIFx(FileError &errCode, Chunk *parent);
-void *cb_sTER(FileError &errCode, Chunk *parent);
-void *cb_dSIG(FileError &errCode, Chunk *parent);
-void *cb_eXIf(FileError &errCode, Chunk *parent);
-void *cb_fRAc(FileError &errCode, Chunk *parent);
-
-
-const ReadFn fnArray[TAGS_ARRAY_SIZE] = {nullptr, cb_IHDR, cb_PLTE, cb_IDAT, cb_IEND, cb_cHRM, cb_gAMA, cb_iCCP, cb_sBIT, cb_sRGB, cb_bKGD,
-                                        cb_hIST, cb_tRNS, cb_pHYs, cb_sPLT, cb_tIME, cb_iTXt, cb_tEXt, cb_zTXt, cb_oFFs, cb_pCAL, cb_sCAL, cb_gIFg,
-                                        cb_gIFt, cb_gIFx, cb_sTER, cb_dSIG, cb_eXIf, cb_fRAc};
-*/
+Error ReadUnknown(void *data, Chunk *owner);
+Error ReadIHDR(void *data, Chunk *owner);
+Error ReadPLTE(void *data, Chunk *owner);
+Error ReadIDAT(void *data, Chunk *owner);
+Error ReadIEND(void *data, Chunk *owner);
+Error ReadcHRM(void *data, Chunk *owner);
+Error ReadgAMA(void *data, Chunk *owner);
+Error ReadiCCP(void *data, Chunk *owner);
+Error ReadsBIT(void *data, Chunk *owner);
+Error ReadsRGB(void *data, Chunk *owner);
+Error ReadbKGD(void *data, Chunk *owner);
+Error ReadhIST(void *data, Chunk *owner);
+Error ReadtRNS(void *data, Chunk *owner);
+Error ReadpHYs(void *data, Chunk *owner);
+Error ReadsPLT(void *data, Chunk *owner);
+Error ReadtIME(void *data, Chunk *owner);
+Error ReadiTXt(void *data, Chunk *owner);
+Error ReadtEXt(void *data, Chunk *owner);
+Error ReadzTXt(void *data, Chunk *owner);
+Error ReadoFFs(void *data, Chunk *owner);
+Error ReadpCAL(void *data, Chunk *owner);
+Error ReadsCAL(void *data, Chunk *owner);
+Error ReadgIFg(void *data, Chunk *owner);
+Error ReadgIFt(void *data, Chunk *owner);
+Error ReadgIFx(void *data, Chunk *owner);
+Error ReadsTER(void *data, Chunk *owner);
+Error ReaddSIG(void *data, Chunk *owner);
+Error ReadeXIf(void *data, Chunk *owner);
+Error ReadfRAc(void *data, Chunk *owner);
 
 class Chunk {
 public:
     Chunk(FILE *fileSeek, Model *mod) :
                             model(mod),
                             crcString(nullptr),
-                            size(0),
+                            previous(nullptr),
+                            file(fileSeek),
                             readCRC(0),
                             calcCRC(0),
+                            size(0),
                             m_type(ChunkType::Unknown),
-                            file(fileSeek),
                             isInitialized(false) {};
 
-    Chunk(const Chunk &c) : 
+/*    Chunk(const Chunk &c) : 
                             model(c.model),
                             crcString(c.crcString),
-                            size(c.size),
+                            previous(c.previous),
+                            file(c.file),
                             readCRC(c.readCRC),
                             calcCRC(c.calcCRC),
+                            size(c.size),
                             m_type(c.m_type),
-                            file(c.file),
                             isInitialized(c.isInitialized) {};
+*/
 
     /// @brief checks this->isInitialized, and free resources accordingly
     virtual ~Chunk();
@@ -135,57 +140,24 @@ public:
      */
     enum Error Init();
 
-    virtual Error Read(void *data) = 0;
+    Error Read(void *data);
 
-protected:
-    Model *model;
-    Chunk *previous;
-    unsigned char *crcString;
-    UINT32 size;
-    bool isInitialized;
     bool TestCRC();
     void ComputeCRC();
     Chunk *GetPrevious();
     void SetPrevious(Chunk *prev);
+    Model *GetModel();
+    bool GetInitStatus();
+    unsigned char *GetCrcString();
 
 private:
+    Model *model;
+    unsigned char *crcString;
+    Chunk *previous;
     FILE *file;
     UINT32 readCRC;
     UINT32 calcCRC;
+    UINT32 size;
     ChunkType m_type;
-};
-
-class ChunkUnknown : public Chunk {
-public:
-    using Chunk::Chunk;
-    ChunkUnknown(const Chunk &c) : Chunk(c) {};
-    Error Read(void *data);
-};
-
-class ChunkIHDR : public Chunk {
-public:
-    using Chunk::Chunk;
-    ChunkIHDR(const Chunk &c) : Chunk(c) {};
-    Error Read(void *data);
-};
-
-class ChunkPLTE : public Chunk {
-public:
-    using Chunk::Chunk;
-    ChunkPLTE(const Chunk &c) : Chunk(c) {};
-    Error Read(void *data);
-};
-
-class ChunkIDAT : public Chunk {
-public:
-    using Chunk::Chunk;
-    ChunkIDAT(const Chunk &c) : Chunk(c) {};
-    Error Read(void *data);
-};
-
-class ChunkIEND : public Chunk {
-public:
-    using Chunk::Chunk;
-    ChunkIEND(const Chunk &c) : Chunk(c) {};
-    Error Read(void *data);
+    bool isInitialized;
 };

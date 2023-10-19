@@ -35,7 +35,6 @@
                 "LINUX",
                 "POSIX"
             ],
-            "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "gcc-x64",
