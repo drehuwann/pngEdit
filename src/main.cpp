@@ -103,6 +103,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
    // Store instance handle in our global variable
    hInst = hInstance;
+   if (hPrevInstance) {}; //suppress warning
+   if (lpCmdLine) {//TODO args parsing
+   }; //suppress warning
 
    // The parameters to CreateWindowEx explained:
    // WS_EX_OVERLAPPEDWINDOW : An optional extended window style.
@@ -212,7 +215,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
          if (LOWORD(wParam) == ID_Info) {
             s_imInfo *inf = engine->GetModel()->GetInfo();
             if (inf == nullptr) {
-               MessageBox(NULL, _T("There is no image info available.\nDid you load a valid \
+               MessageBox(hWnd, _T("There is no image info available.\nDid you load a valid \
 *.png file before querying info ?"), _T("WARNING"), 0);
             } else {
                const char *colstr = colourStr[inf->bitfield.colourType.to_ulong()];
@@ -223,9 +226,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                int size = std::snprintf(nullptr, 0, infoStr, w, h, colstr, bd, intstr);
                size ++; // +1 for null termination.
                char *str = (char *)(malloc((size_t)size));
-               std::sprintf(str, infoStr, w, h, colstr, bd, intstr);
+               sprintf_s(str, size, infoStr, w, h, colstr, bd, intstr);
                LPCTSTR tstr = FromCstr((const char *)str);
-               MessageBox(NULL, tstr, _T("image Info"), 0);
+               MessageBox(hWnd, tstr, _T("image Info"), 0);
                if (tstr && tstr != (LPCTSTR)str) {
                   delete tstr;
                }
@@ -246,7 +249,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
       }
       case WM_PAINT:
          hdc = BeginPaint(hWnd, &ps);
-         TextOut(hdc, 5, 5, greeting, _tcslen(greeting));
+         TextOut(hdc, 5, 5, greeting, (int)(_tcslen(greeting)));
          EndPaint(hWnd, &ps);
          break;
       case WM_DESTROY:

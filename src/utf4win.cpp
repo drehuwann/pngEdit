@@ -7,7 +7,7 @@
  * @return tStr if entry was const char*. else returns a new const char* from wchar *entry
  */
 const char *ToCstr(LPCTSTR tStr) {
-   if (sizeof(TCHAR) == sizeof(char)) {
+   if constexpr(sizeof(TCHAR) == sizeof(char)) {
       return (const char *)tStr;
    }
    size_t inSize = lstrlen(tStr);
@@ -24,7 +24,7 @@ const char *ToCstr(LPCTSTR tStr) {
  * @return tStr if _UNICODE is not defined. else returns a new const wchar* from const char *entry
  */
 LPCTSTR FromCstr(const char *tStr) {
-   if (sizeof(TCHAR) == sizeof(char)) {
+   if constexpr(sizeof(TCHAR) == sizeof(char)) {
       return (LPCTSTR)tStr;
    }
    size_t inSize = strlen(tStr);

@@ -1,7 +1,7 @@
 #include "pngfile.h"
 #include "htonntoh.h"
 
-PngFile::PngFile() : filepath(), fileBuffer(nullptr) {
+PngFile::PngFile() : filepath(), fileBuffer(nullptr), model (nullptr) {
 }
 
 PngFile::~PngFile() {
@@ -49,7 +49,7 @@ Error PngFile::Load() {
 #ifdef WIN32
     LPCTSTR inStr = (LPCTSTR)(filepath.c_str());
     const char *cStr = ToCstr(inStr);
-    if (!(fileBuffer = fopen(cStr, "rb"))) {
+    if (fopen_s(&fileBuffer, cStr, "rb")) {
         return Error::FAILOPEN;
     }
     if (cStr && cStr != (const char *)(inStr)) {
@@ -57,7 +57,7 @@ Error PngFile::Load() {
     }
 #else
 #ifdef POSIX
-    if (!(fileBuffer = fopen(filepath.c_str(), "rb"))) {
+    if (fopen_s(&fileBuffer, filepath.c_str(), "rb")) {
         return Error::FAILOPEN;
     }
 #else  // POSIX
