@@ -98,12 +98,14 @@ Error PngFile::Load() {
             case ChunkType::PLTE: {
                 UINT32 size = chunk->GetDataSize();
                 UINT32 paletteSize = size / 3;
-                if (size % 3) {
-                    errCode = Error::BADHEADER;
+                UINT8 MaxPaletteSize = 1 << ((model->GetInfo()->bitfield.bitDepth).to_ulong()); //computed palSize from bitdepth. 
+                if ((size % 3 ) || ((size/3) > (UINT32)MaxPaletteSize)) {
+                    errCode = Error::BADPALETTE;
                 } else {
                     serData.data = malloc(sizeof(s_paletteEntry) * paletteSize);
                     errCode = chunk->Read(serData.data);
-                    //TODO moves to model
+                    model->SetPalette((Palette)(serData.data));
+                    model->SetPaletteSize((UINT8)(0xff & (size / 3)));
                 }
                 break;
             }

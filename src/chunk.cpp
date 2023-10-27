@@ -237,11 +237,10 @@ Error ReadPLTE(void *data, Chunk *owner) {
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     UINT32 size = owner->GetDataSize();
     UINT32 paletteSize = size / 3;
-    if (size % 3) return Error::BADPALETTE;
-    /*TODO access to imInfo from here
-    test paletteSize compatible with colour type and bitdepth
-    TODO check alignment and padding of s_paletteEntry
-    */
+    s_imInfo *p_inf = model->GetInfo();
+    if (p_inf == nullptr) return Error::MEMORYERROR;
+    if (p_inf->bitfield.colourType.to_ulong() % 4 == 0 ) //coltype 0 or 4 forbidden
+        return Error::BADPALETTE;
     s_paletteEntry *palEntry = (s_paletteEntry *)data;
     s_paletteEntry entryRead;
     unsigned char *buf = owner->GetCrcString();

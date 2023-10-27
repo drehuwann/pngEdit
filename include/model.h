@@ -50,6 +50,8 @@ public:
     void SetChunksHead(Chunk *head);
     Palette GetPalette();
     void SetPalette(Palette palette);
+    UINT8 GetPaletteSize();
+    void SetPaletteSize(UINT8 size);
     void PickFile(const char *path);
 
 private:
@@ -66,5 +68,6 @@ private:
     s_imInfo *m_info;
     Bytef *inflateBuffer;
     Palette pal;
+    UINT8 palSize;
     UINT8 pixelBinarySize;
 };

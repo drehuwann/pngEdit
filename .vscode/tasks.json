@@ -39,11 +39,13 @@
             "label": "objdump",
             "type": "shell",
             "linux": {
-                "command": "pushd ${workspaceFolder}/build/src/CMakeFiles/pngEditor.dir; objdump -Dj .text --visualize-jumps=color --disassembler-color=on -M intel ${fileBasenameNoExtension}.cpp.o | less -R; popd"
+                "command": "pushd ${workspaceFolder}/build/src/CMakeFiles/pngEditor.dir; objdump -Dj .text --visualize-jumps=color --disassembler-color=on -M intel ${fileBasenameNoExtension}.cpp.o | less -R; popd",
+                "problemMatcher": "$gcc"
             },
-            "problemMatcher": [
-                "$gcc"
-            ]
+            "windows": {
+                "command": "pushd ${workspaceFolder}/build/src/pngEditor.dir/Debug; dumpbin /DISASM /SECTION:'.text$mn' ${fileBasenameNoExtension}.obj | more; popd",
+                "problemMatcher": "$msCompile"
+            }
         }
     ]
 }
