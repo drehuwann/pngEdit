@@ -7,5 +7,5 @@ Published under the terms of the General Public License.<br>
 # dependencies
 On linux : [wxWidgets](https://github.com/wxWidgets/wxWidgets)<br>
 # ToDo
-Parsing of many chunk types (as daughter classes of <code>Chunk()</code>) still need to be implemented.<br>
+Parsing of many chunk types (as <code>ChunkError Read....(void *, Chunk *)</code> functions) still need to be implemented.<br>
 We don't use libpng, so the reference document should be [png specifications](https://www.w3.org/TR/png-3)<br>
