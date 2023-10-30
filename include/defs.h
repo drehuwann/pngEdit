@@ -2,16 +2,18 @@
 
 #ifdef WIN32
 #include <basetsd.h>
+#define BREAKPOINT __asm{__asm int 3};
 #else  //WIN32
 #ifdef POSIX
 #include <sys/types.h>
 #include <cstdint>
+#define SIZE_T size_t
 #define SSIZE_T ssize_t
 #define UINT8 uint8_t
 #define UINT16 uint16_t
 #define UINT32 uint32_t
 #define UINT64 uint64_t
-
+#define BREAKPOINT __asm__("int $3\n");
 class MyFrame; //Fwd declaration
 #define HWND MyFrame *
 
@@ -40,6 +42,8 @@ eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
 #define infoStr "Dimensions(WxH) : %ux%u\r\nColourType/BitDepth : %s/%lu bit(s)\
 \r\nInterlace : %s"
 
+#define _BP_ BREAKPOINT
+
 enum Error : SSIZE_T {
     NONE = 0,
     NOFILENAME = -1,
@@ -62,7 +66,6 @@ enum Error : SSIZE_T {
     IDATEMPTY = -18,
     IENDREACHED = -19,
     NOIMGINFO = -20,
-    OTHER = -21
+    ZTOOLSTESTFAILED = -21,
+    OTHER = -22
 };
-
-#define BREAKPOINT __asm { int 3; }

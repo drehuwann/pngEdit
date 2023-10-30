@@ -1,6 +1,5 @@
 #pragma once
 
-
 #ifdef WIN32
 #else  // WIN32
 #ifdef POSIX
@@ -8,10 +7,16 @@
 #error non win non posix not implemenmted yet.
 #endif // POSIX  
 #endif  // WIN32
+
+#include "ztools.h"
 #include "model.h"
 #include "controller.h"
-class Model; //fwd declaration
-class Controller; //fwd declaration
+
+//forward declarations
+
+class Model;
+class Controller;
+
 
 class Engine {
 public:

@@ -57,7 +57,8 @@ Error PngFile::Load() {
     }
 #else
 #ifdef POSIX
-    if (fopen_s(&fileBuffer, filepath.c_str(), "rb")) {
+    fileBuffer = fopen(filepath.c_str(), "rb");
+    if (fileBuffer == nullptr) {
         return Error::FAILOPEN;
     }
 #else  // POSIX

@@ -3,7 +3,6 @@
 #ifdef WIN32
 #include <basetsd.h>
 #endif  // WIN32
-#include "ztools.h"
 #include <cstdio>
 #include <bitset>
 #include "engine.h"

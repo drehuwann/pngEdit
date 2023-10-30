@@ -1,13 +1,16 @@
 #pragma once
 
 #include "defs.h"
-#include "ztools.h"
 #include "chunk.h"
 #include "engine.h"
 #include "pngfile.h"
+
+// forward declarations
+
 class Chunk;
 class Engine;
 class PngFile;
+
 
 struct s_imInfo {
     s_imInfo() : width(0), height(0), colourTypeDepthFlag(0),
@@ -66,7 +69,7 @@ private:
 
     PngFile *m_file;
     s_imInfo *m_info;
-    Bytef *inflateBuffer;
+    Byte *inflateBuffer;
     Palette pal;
     UINT8 palSize;
     UINT8 pixelBinarySize;
