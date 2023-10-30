@@ -86,10 +86,14 @@ static Byte *HuffmanDecode(const Byte *in, const SIZE_T inSize,
 
 /* public functions */
 
-/// file masked by .gitignore, it contains a song lyrics to be used by
-/// TestZtools(). //TODO wait for publication authorization.
+/// 'tstString.txt' : file masked by .gitignore.
+/// It contains a song lyrics to be used by 'int TestZtools();'
+////TODO wait for publication authorization.
+/// Else you can make your own private tstString.txt containing the line:
+/// const char *tstStr = "<...whatever you want as test string...>";
 #include "tstString.txt" //will define tstStr[]
-static const SIZE_T inSize = strlen(tstStr) + 1;
+
+static const SIZE_T inSize = strlen(tstStr) + 1; //+1 for NULL_termination
 
 int TestZtools() {
     int toRet = -1; //error by default
