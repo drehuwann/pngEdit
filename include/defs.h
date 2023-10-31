@@ -2,7 +2,8 @@
 
 #ifdef WIN32
 #include <basetsd.h>
-#define BREAKPOINT __asm{__asm int 3};
+#include <intrin.h>
+#define BREAKPOINT __debugbreak();
 #else  //WIN32
 #ifdef POSIX
 #include <sys/types.h>
@@ -42,7 +43,12 @@ eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
 #define infoStr "Dimensions(WxH) : %ux%u\r\nColourType/BitDepth : %s/%lu bit(s)\
 \r\nInterlace : %s"
 
-#define _BP_ BREAKPOINT
+#ifdef _DEBUG
+    #define _BP_ BREAKPOINT
+#else  // _DEBUG
+    #undef BREAKPOINT
+    #define _BP_  //defines _BP_ to NULL
+#endif  // _DEBUG
 
 enum Error : SSIZE_T {
     NONE = 0,

@@ -1,4 +1,4 @@
 .vscode/launch.json
 build/*
 output/*
-tstString.txt
+include/tstString.txt

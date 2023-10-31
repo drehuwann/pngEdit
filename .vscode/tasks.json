@@ -21,6 +21,25 @@
             }
         },
         {
+            "label": "cmake release",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "type": "shell",
+            "windows": {
+                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build . --config Release; cd src; cp Release/pngEditor.exe ../../output; cd ../../.vscode; cp launchWin.json launch.json; popd",
+                "problemMatcher": "$msCompile"
+            },
+            "linux": {
+                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build . --config Release; cd src; cp pngEditor ../../output;  cd ../../.vscode; ln -sf ./launchLin.json launch.json; popd",
+                "problemMatcher": "$gcc"
+            },
+            "osx": {
+                "command": "echo osx not implemented yet"
+            }
+        },
+        {
             "label": "clean",
             "type": "shell",
             "windows": {
