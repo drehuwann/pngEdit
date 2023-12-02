@@ -64,6 +64,24 @@
             "windows": {
                 "command": "pushd ${workspaceFolder}/build/src/pngEditor.dir/Debug; dumpbin /DISASM /SECTION:'.text$mn' ${fileBasenameNoExtension}.obj | more; popd",
                 "problemMatcher": "$msCompile"
+            },
+            "osx": {
+                "command": "echo osx not implemented yet"
+            }
+        },
+        {
+            "label": "memcheck",
+            "type": "shell",
+            "linux": {
+                "command": "mkdir -pv ${workspaceFolder}/build/logs; pushd ${workspaceFolder}/build/logs; valgrind --log-file=./valgrind_PID%p.log ${workspaceFolder}/output/pngEditor; echo Check valgrind logfile at $PWD; popd",
+                "problemMatcher": "$gcc"
+            },
+            "windows": {
+                "command": "echo UNAVAILABLE ! //TODO:implement memcheck under ^Ms",
+                "problemMatcher": "$msCompile"
+            },
+            "osx": {
+                "command": "echo osx not implemented yet"
             }
         }
     ]
