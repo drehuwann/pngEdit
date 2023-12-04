@@ -13,7 +13,7 @@
 #include "defs.h"
 #include "engine.h"
 
-// object to represent running Engine
+/// Global object to represent running Engine
 Engine *engine = nullptr;
 
 const char *colourStr[8] = {
@@ -61,16 +61,16 @@ Engine *InitEngine(HWND hWnd) {
 }
 
 #ifdef WIN32
-// The main window class name.
+/// The main window class name.
 static TCHAR szWindowClass[] = _T("DesktopApp");
 
-// The string that appears in the application's title bar.
+/// The string that appears in the application's title bar.
 static TCHAR szTitle[] = _T("png Editor");
 
-// Stored instance handle for use in Win32 API calls such as FindResource
+/// Stored instance handle for use in Win32 API calls such as FindResource
 HINSTANCE hInst;
 
-// Forward declarations of functions included in this code module:
+/// Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 void About(HWND hWnd) {

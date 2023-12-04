@@ -3,13 +3,18 @@
 extern "C" {
 #endif
 
+/* persistent variables*/
+static UINT16 LZwindowSize = LZwindowMaxSize;
+
 /* private functions */
-/// @brief Allocates a Byte array filled with LZ77 encoding of input buffer
-/// @param in address of input buffer.
+/// @brief Allocates a Byte array filled with LZ77 encoding of input buffer.
+/// @param in address of input buffer. If function succeeds, the input buffer 
+/// is freed.
 /// @param inSize size of input buffer.
-/// @param outSizePtr SIZE_T *, to hold allocated Byte array's size.
+/// @param outSizePtr SIZE_T *, to hold and return allocated Byte array's size.
 /// @return Address of allocated Byte array.
-/// @return returns NULL on error. in this case, *outSizePtr is set to 0.
+/// @return returns NULL on error. in this case, *outSizePtr is set to 0,
+/// and *in remains allocated.
 static Byte *LZ77Encode(const Byte *in, const SIZE_T inSize,
         SIZE_T *const outSizePtr) {
     if (outSizePtr == NULL) return NULL;
@@ -25,11 +30,13 @@ static Byte *LZ77Encode(const Byte *in, const SIZE_T inSize,
 }
 
 /// @brief Allocates a Byte array filled with Huffman encoding of input buffer
-/// @param in address of input buffer.
+/// @param in address of input buffer. If function succeeds, the input buffer 
+/// is freed.
 /// @param inSize size of input buffer.
-/// @param outSizePtr SIZE_T *, to hold allocated Byte array's size.
+/// @param outSizePtr SIZE_T *, to hold and return allocated Byte array's size.
 /// @return Address of allocated Byte array.
-/// @return returns NULL on error. in this case, *outSizePtr is set to 0.
+/// @return returns NULL on error. in this case, *outSizePtr is set to 0,
+/// and *in remains allocated.
 static Byte *HuffmanEncode(const Byte *in, const SIZE_T inSize,
         SIZE_T *const outSizePtr) {
     if (outSizePtr == NULL) return NULL;
@@ -45,11 +52,13 @@ static Byte *HuffmanEncode(const Byte *in, const SIZE_T inSize,
 }
 
 /// @brief Allocates a Byte array filled with LZ77 decoding of input buffer
-/// @param in address of input buffer.
+/// @param in address of input buffer. If function succeeds, the input buffer 
+/// is freed.
 /// @param inSize size of input buffer.
-/// @param outSizePtr SIZE_T *, to hold allocated Byte array's size.
+/// @param outSizePtr SIZE_T *, to hold and return allocated Byte array's size.
 /// @return Address of allocated Byte array.
-/// @return returns NULL on error. in this case, *outSizePtr is set to 0.
+/// @return returns NULL on error. in this case, *outSizePtr is set to 0,
+/// and *in remains allocated.
 static Byte *LZ77Decode(const Byte *in, const SIZE_T inSize,
         SIZE_T *const outSizePtr) {
     if (outSizePtr == NULL) return NULL;
@@ -65,11 +74,13 @@ static Byte *LZ77Decode(const Byte *in, const SIZE_T inSize,
 }
 
 /// @brief Allocates a Byte array filled with Huffman decoding of input buffer
-/// @param in address of input buffer.
+/// @param in address of input buffer. If function succeeds, the input buffer 
+/// is freed.
 /// @param inSize size of input buffer.
-/// @param outSizePtr SIZE_T *, to hold allocated Byte array's size.
+/// @param outSizePtr SIZE_T *, to hold and return allocated Byte array's size.
 /// @return Address of allocated Byte array.
-/// @return returns NULL on error. in this case, *outSizePtr is set to 0.
+/// @return returns NULL on error. in this case, *outSizePtr is set to 0,
+/// and *in remains allocated.
 static Byte *HuffmanDecode(const Byte *in, const SIZE_T inSize,
         SIZE_T *const outSizePtr) {
     if (outSizePtr == NULL) return NULL;
@@ -86,11 +97,11 @@ static Byte *HuffmanDecode(const Byte *in, const SIZE_T inSize,
 
 /* public functions */
 
-/// 'tstString.txt' : file masked by .gitignore.
-/// It contains a song lyrics to be used by 'int TestZtools();'
-////TODO wait for publication authorization.
-/// Else you can make your own private tstString.txt containing the line:
-/// const char *tstStr = "<...whatever you want as test string...>";
+// 'tstString.txt' : file masked by .gitignore.
+// It contains a song lyrics to be used by 'int TestZtools();'
+// /TODO wait for publication authorization.
+// Else you can make your own private tstString.txt containing the line:
+// const char *tstStr = "<...whatever you want as test string...>";
 #include "tstString.txt" //will define tstStr[]
 
 static const SIZE_T inSize = strlen(tstStr) + 1; //+1 for NULL_termination
@@ -99,7 +110,7 @@ int TestZtools() {
     int toRet = -1; //error by default
     const Byte *const in = (Byte *)tstStr;
 
-    /// used to store last /(LZ77|Huffman)(En|De)code/ function returned pointer
+    // used to store last /(LZ77|Huffman)(En|De)code/ function returned pointer
     Byte *out = NULL;
 
     SIZE_T outSize = 0;
@@ -122,7 +133,7 @@ int TestZtools() {
         _BP_
     }
 
-    /// @brief used to store the size of the last available returned Byte array.
+    // used to store the size of the last available returned Byte array.
     SIZE_T lastOutSize = *outSizePtr;
     
     if (HuffmanEncode(NULL, 0, NULL)) { //should return NULL

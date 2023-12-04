@@ -1,7 +1,12 @@
 #pragma once
 
 #include "engine.h"
-class Engine; // fwd decl
+
+// forward declarations
+
+class Engine;
+
+
 class Controller {
 public:
     Controller(Engine *engine);

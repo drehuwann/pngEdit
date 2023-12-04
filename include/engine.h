@@ -22,6 +22,13 @@ class Engine {
 public:
     Engine();
     ~Engine();
+
+    /// @brief Runs ztools tests and checks validity of parameters(no nullptr!).
+    /// if everything is ok, copy params in Engine private fields.
+    /// @param modl pointer on the model
+    /// @param view pointer on the view
+    /// @param ctrl pointer on the controller
+    /// @return Error::NONE on success.
     Error Init(Model *modl, void *view, Controller *ctrl);
     Model *GetModel();
     Controller *GetController();
