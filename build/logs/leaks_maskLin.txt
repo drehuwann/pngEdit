@@ -1,0 +1,24 @@
+{
+   ignore_unversioned_libs
+   Memcheck:Leak
+   ...
+   obj:*/lib*/lib*.so
+}
+{
+   ignore_versioned_libs
+   Memcheck:Leak
+   ...
+   obj:*/lib*/lib*.so.*
+}
+{
+   ignore_link_load_unversioned
+   Memcheck:Leak
+   ...
+   obj:*/lib*/ld-*.so
+}
+{
+   ignore_link_load_versioned
+   Memcheck:Leak
+   ...
+   obj:*/lib*/ld-*.so.*
+}

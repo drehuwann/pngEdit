@@ -43,11 +43,11 @@
             "label": "clean",
             "type": "shell",
             "windows": {
-                "command": "pushd ${workspaceFolder}/build; rm -r *; git restore ./.gitignore; rm ../output/pngEditor.exe; popd",
+                "command": "pushd ${workspaceFolder}/build; rm -r *; git restore ./.gitignore; git restore ./logs; rm ../output/pngEditor.exe; popd",
                 "problemMatcher": "$msCompile"
             },
             "linux": {
-                "command": "pushd ${workspaceFolder}/build; rm -r *; rm -r .*; git restore ./.gitignore; rm ../output/pngEditor; popd",
+                "command": "pushd ${workspaceFolder}/build; rm -r *; rm -r .*; git restore ./.gitignore; git restore ./logs; rm ../output/pngEditor; popd",
                 "problemMatcher": "$gcc"
             },
             "osx": {
@@ -73,7 +73,7 @@
             "label": "memcheck",
             "type": "shell",
             "linux": {
-                "command": "mkdir -pv ${workspaceFolder}/build/logs; pushd ${workspaceFolder}/build/logs; valgrind --log-file=./valgrind_PID%p.log ${workspaceFolder}/output/pngEditor; echo Check valgrind logfile at $PWD; popd",
+                "command": "pushd ${workspaceFolder}/build/logs; valgrind -s --leak-check=full --show-leak-kinds=all --log-file=./valgrind_PID%p.log --suppressions=./leaks_maskLin.txt ${workspaceFolder}/output/pngEditor; echo Check valgrind logfile at $PWD; popd",
                 "problemMatcher": "$gcc"
             },
             "windows": {
