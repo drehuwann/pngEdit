@@ -105,6 +105,7 @@ public:
                             readCRC(0),
                             calcCRC(0),
                             size(0),
+                            ttag(0),
                             m_type(ChunkType::Unknown),
                             isInitialized(false) {};
 
@@ -116,6 +117,7 @@ public:
                             readCRC(c.readCRC),
                             calcCRC(c.calcCRC),
                             size(c.size),
+                            ttag(c.typeTag),
                             m_type(c.m_type),
                             isInitialized(c.isInitialized) {};
 */
@@ -127,6 +129,10 @@ public:
         return m_type;
     };
     
+    UINT32 GetTypeTag() {
+        return ttag;
+    };
+
     UINT32 GetDataSize() {
         return size;
     };
@@ -157,6 +163,7 @@ private:
     UINT32 readCRC;
     UINT32 calcCRC;
     UINT32 size;
+    UINT32 ttag; //type tag seen as uint32_t
     ChunkType m_type;
     bool isInitialized;
 };

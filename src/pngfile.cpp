@@ -69,11 +69,11 @@ Error PngFile::Load() {
     Error errCode;
     if ((errCode = isPng()) != Error::NONE) {
         if (fclose(fileBuffer) == EOF) return Error::FAILCLOSE;
+        fileBuffer = nullptr;
         return errCode;
     }
 
     // Now parse chunks : 
-    //TODO make a vector
     while (errCode == Error::NONE) {
         Chunk *chunk = new Chunk(fileBuffer, this->model);
         if (!chunk) return Error::MEMORYERROR;
@@ -81,6 +81,7 @@ Error PngFile::Load() {
         if (errCode != Error::NONE) {
             delete chunk;
             if (fclose(fileBuffer) == EOF) return Error::FAILCLOSE;
+            fileBuffer = nullptr;
             return errCode;
         }
         ChunkType type = chunk->GetType();
@@ -138,7 +139,6 @@ Error PngFile::Load() {
             }
         }
     }
-//TODO on reprends ci-dessus...
     if (errCode == Error::IENDREACHED) {
         if (fgetc(fileBuffer) == EOF) {
             errCode = feof(fileBuffer)? Error::NONE : Error::FAILREAD;
@@ -147,6 +147,10 @@ Error PngFile::Load() {
             //TODO Tell the user there is something beyond IEND and ask what to do. 
         }
     }
-    if (fclose(fileBuffer) == EOF) errCode = Error::FAILCLOSE;
+    if (fclose(fileBuffer) == EOF) {
+        errCode = Error::FAILCLOSE;
+    } else {
+        this->fileBuffer = nullptr;
+    }
     return errCode;
 }

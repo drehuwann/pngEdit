@@ -2,6 +2,9 @@
 // compile with: /D_UNICODE /DUNICODE /DWIN32 /D_WINDOWS D_WINSOCKAPI_ /c
 
 #include "utf4win.h"
+#include "defs.h"
+#include "htonntoh.h"
+
 #ifdef WIN32
 #include <tchar.h>
 #else   // WIN32
@@ -265,6 +268,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 #ifdef POSIX
 #include <wx/wx.h>
 #include <wx/filedlg.h>
+#include <wx/treectrl.h>
 
 class MyApp : public wxApp {
 public:
@@ -367,6 +371,28 @@ void MyFrame::OnInfo(wxCommandEvent &/*event*/) {
 }
 
 void MyFrame::OnLayo(wxCommandEvent &/*event*/) {
+   Chunk *head = engine->GetModel()->GetChunksHead();
+   if (head == nullptr) {
+      wxMessageBox("There is no chunk layout available.\nDid you load a valid \
+*.png file before querying layout ?", "WARNING", wxOK | wxICON_WARNING, this);
+   } else {
+      wxTreeCtrl *MyLayoutView = new wxTreeCtrl();
+      wxTreeItemId root = MyLayoutView->AddRoot("Chunks layout");
+      while (head) {
+         char tag[5];
+         UINT32 tTag = hton(head->GetTypeTag());
+         std::sprintf(tag, "%c%c%c%c",
+            (tTag & 0xff000000) >> 24,
+            (tTag & 0xff0000) >> 16,
+            (tTag & 0xff00) >> 8,
+            (tTag & 0xff)
+         );
+         MyLayoutView->AppendItem(root, wxString(tag));
+         head = head->GetPrevious();
+      }
+      MyLayoutView->Create(this);
+      MyLayoutView->Show(true);
+   }
 }
  
 void MyFrame::OnExit(wxCommandEvent &/*event*/) {

@@ -113,6 +113,7 @@ Error Chunk::Init() {
         ++ it;
         if (p_testTag && *p_testTag == chunkTag) {
             m_type = (ChunkType)it;
+            ttag = chunkTag;
             isInitialized = true;
             return Error::NONE;
         }
