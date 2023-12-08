@@ -23,7 +23,7 @@ ENDIF()
 add_subdirectory(src)
 
 IF(WIN32)
-    target_link_libraries(pngEditor ws2_32)
+    target_link_libraries(pngEditor ws2_32 Comctl32)
 ELSEIF(UNIX)
     target_link_libraries(pngEditor ${wxWidgets_LIBRARIES})
 ELSE()

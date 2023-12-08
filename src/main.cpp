@@ -63,6 +63,36 @@ Engine *InitEngine(HWND hWnd) {
    return toRet;
 }
 
+/// @brief 
+/// @return created treeView HWND on ^Ms, MyFrame* on wxWidgets, nullptr on error. 
+HWND CreateATreeView(HWND hwndParent) {
+    HWND hwndTV = nullptr;    // handle to tree-view control
+#ifdef WIN32 
+    RECT rcClient;  // dimensions of client area 
+
+    // Ensure that the common control DLL is loaded.
+    INITCOMMONCONTROLSEX iccs;
+    iccs.dwICC = ICC_TREEVIEW_CLASSES;
+    iccs.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    InitCommonControlsEx(&iccs);
+
+    // Get the dimensions of the parent window's client area, and create 
+    // the tree-view control. 
+    GetClientRect(hwndParent, &rcClient); 
+    hwndTV = CreateWindowEx(
+                0, WC_TREEVIEW, TEXT("Tree View"),
+                WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_HASLINES, 
+                0, 0, rcClient.right, rcClient.bottom, hwndParent, 0, 0, 0); 
+#else  //WIN32
+#ifdef POSIX
+//TODO implement this on linux
+#else  // POSIX
+#error nonWIn or nonPosix not implemented yet.
+#endif //POSIX
+#endif //WIN32
+    return hwndTV;
+}
+
 #ifdef WIN32
 /// The main window class name.
 static TCHAR szWindowClass[] = _T("DesktopApp");
@@ -238,7 +268,53 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                if (str) delete str;
             }
          }
-         if (LOWORD(wParam) == ID_Layo) {}
+         if (LOWORD(wParam) == ID_Layo) {
+            Controller *ctrl = engine->GetController();
+            Chunk *head = engine->GetModel()->GetChunksHead();
+            if (ctrl == nullptr) {
+               MessageBox(hWnd, _T("There is no controller available."),
+                  _T("CRITICAL"), 0);
+            } else if (head == nullptr) {
+               MessageBox(hWnd, _T("There is no chunk layout available.\n\
+Did you load a valid *.png file before querying layout ?"), _T("WARNING"), 0);
+            } else {
+               HWND MyLayoutView = CreateATreeView(hWnd);
+               TVITEMEX root;
+               root.mask = TVIF_TEXT;
+               root.pszText = _T("Chunks layout");
+               root.cchTextMax = sizeof(root.pszText)/sizeof(root.pszText[0]);
+               TVINSERTSTRUCT node;
+               node.hInsertAfter = TVI_ROOT;
+               node.hParent = nullptr;
+               node.itemex = root;
+               HTREEITEM hPrev = (HTREEITEM)SendMessage(MyLayoutView,
+                  TVM_INSERTITEM, 0, (LPARAM)(LPTVINSERTSTRUCT)&node);
+               while (head) {
+                  char tag[5];
+                  UINT32 tTag = hton(head->GetTypeTag());
+                  sprintf_s(tag, "%c%c%c%c",
+                     (tTag & 0xff000000) >> 24,
+                     (tTag & 0xff0000) >> 16,
+                     (tTag & 0xff00) >> 8,
+                     (tTag & 0xff)
+                  );
+                  LPCTSTR tstr = FromCstr((const char *)tag);
+                  TVITEMEX current;
+                  current.mask = TVIF_TEXT;
+                  current.pszText = (LPTSTR)tstr;
+                  current.cchTextMax = sizeof(current.pszText)/sizeof(current.pszText[0]);
+                  node.hParent = hPrev;
+                  node.hInsertAfter = TVI_FIRST;
+                  node.itemex = current;
+                  SendMessage(MyLayoutView, TVM_INSERTITEM, 0,
+                     (LPARAM)(LPTVINSERTSTRUCT)&node);
+                  head = head->GetPrevious();
+                  if (tstr && tstr != (LPCTSTR)tag) {
+                     delete tstr;
+                  }
+               }
+            }
+         }
          if (LOWORD(wParam) == ID_Exit) {
             PostQuitMessage(0);
             exit(0);

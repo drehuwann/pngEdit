@@ -77,7 +77,7 @@
                 "problemMatcher": "$gcc"
             },
             "windows": {
-                "command": "pushd ${workspaceFolder}/build; mkdir logs; cd logs; drmemory -logdir . -ignore_kernel -- ${workspaceFolder}/output/pngEditor; echo Check drmemory logfile at ${workspaceFolder}/build/logs; popd",
+                "command": "pushd ${workspaceFolder}/build/logs; drmemory -logdir . -ignore_kernel -- ${workspaceFolder}/output/pngEditor; echo Check drmemory logfile at ${workspaceFolder}/build/logs; popd",
                 "problemMatcher": "$msCompile"
             },
             "osx": {
