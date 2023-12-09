@@ -63,11 +63,11 @@ Engine *InitEngine(HWND hWnd) {
    return toRet;
 }
 
+#ifdef WIN32
 /// @brief 
 /// @return created treeView HWND on ^Ms, MyFrame* on wxWidgets, nullptr on error. 
 HWND CreateATreeView(HWND hwndParent) {
     HWND hwndTV = nullptr;    // handle to tree-view control
-#ifdef WIN32 
     RECT rcClient;  // dimensions of client area 
 
     // Ensure that the common control DLL is loaded.
@@ -83,17 +83,9 @@ HWND CreateATreeView(HWND hwndParent) {
                 0, WC_TREEVIEW, TEXT("Tree View"),
                 WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_HASLINES, 
                 0, 0, rcClient.right, rcClient.bottom, hwndParent, 0, 0, 0); 
-#else  //WIN32
-#ifdef POSIX
-//TODO implement this on linux
-#else  // POSIX
-#error nonWIn or nonPosix not implemented yet.
-#endif //POSIX
-#endif //WIN32
     return hwndTV;
 }
 
-#ifdef WIN32
 /// The main window class name.
 static TCHAR szWindowClass[] = _T("DesktopApp");
 
@@ -463,10 +455,12 @@ void MyFrame::OnLayo(wxCommandEvent &/*event*/) {
             (tTag & 0xff00) >> 8,
             (tTag & 0xff)
          );
-         MyLayoutView->AppendItem(root, wxString(tag));
+         MyLayoutView->InsertItem(root, 0, wxString(tag));
          head = head->GetPrevious();
       }
-      MyLayoutView->Create(this);
+      int W, H;
+      this->DoGetClientSize(&W, &H);
+      MyLayoutView->Create(this, wxID_ANY, wxDefaultPosition, wxSize(W/4, H));
       MyLayoutView->Show(true);
    }
 }

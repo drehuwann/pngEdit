@@ -128,7 +128,8 @@ Error PngFile::Load() {
                 if (chunk->GetDataSize()) {
                     errCode = Error::BADFOOTER;
                 } else {
-                    errCode = Error::IENDREACHED; // Normal termination
+                    //there is nothing to read and NULL will be catched by Chunk::ReadIEND()
+                    errCode = chunk->Read(nullptr);
                 }
                 break;
             }

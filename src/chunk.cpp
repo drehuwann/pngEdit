@@ -278,7 +278,7 @@ Error ReadIDAT(void *data, Chunk *owner) {
 }
 
 Error ReadIEND(void *data, Chunk *owner) {
-    if (! data || ! owner) return Error::MEMORYERROR;
+    if (data || ! owner) return Error::MEMORYERROR; //data should be NULL !
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
     Chunk *headChunk = model->GetChunksHead();
