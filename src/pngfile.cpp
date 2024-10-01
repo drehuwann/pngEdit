@@ -100,7 +100,7 @@ Error PngFile::Load() {
             case ChunkType::PLTE: {
                 UINT32 size = chunk->GetDataSize();
                 UINT32 paletteSize = size / 3;
-                UINT8 MaxPaletteSize = 1 << ((model->GetInfo()->bitfield.bitDepth).to_ulong()); //computed palSize from bitdepth. 
+                UINT16 MaxPaletteSize = 1 << ((model->GetInfo()->bitfield.bitDepth).to_ulong()); //computed palSize from bitdepth. 
                 if ((size % 3 ) || ((size/3) > (UINT32)MaxPaletteSize)) {
                     errCode = Error::BADPALETTE;
                 } else {
