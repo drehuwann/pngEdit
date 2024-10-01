@@ -3,13 +3,11 @@
     "configurations": [
         {
             "name": "(Windows) Lancer",
-            "type": "cppvsdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/output/pngEditor.exe",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${fileDirname}",
-            "environment": [],
             "console": "integratedTerminal"
         }
     ]

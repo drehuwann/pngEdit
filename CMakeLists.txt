@@ -20,12 +20,13 @@ ELSE()
     # TODO build elsewhere...
 ENDIF()
 
+add_subdirectory(zlib)
 add_subdirectory(src)
 
 IF(WIN32)
-    target_link_libraries(pngEditor ws2_32 Comctl32)
+    target_link_libraries(pngEditor ws2_32 Comctl32 zlib)
 ELSEIF(UNIX)
-    target_link_libraries(pngEditor ${wxWidgets_LIBRARIES})
+    target_link_libraries(pngEditor ${wxWidgets_LIBRARIES} zlib)
 ELSE()
     # TODO build elsewhere...
 ENDIF()
