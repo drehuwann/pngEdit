@@ -371,7 +371,7 @@ bool MyApp::OnInit() {
    return true;
 }
  
-MyFrame::MyFrame() : wxFrame(NULL, wxID_ANY, "png Editor", wxDefaultPosition,
+MyFrame::MyFrame() : wxFrame(nullptr, wxID_ANY, "png Editor", wxDefaultPosition,
 wxSize(SIZE_X, SIZE_Y)) {
    wxMenu *menuFile = new wxMenu;
    menuFile->Append(ID_Save, "&Save\tCtrl-S",

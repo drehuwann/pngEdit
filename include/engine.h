@@ -8,7 +8,6 @@
 #endif // POSIX  
 #endif  // WIN32
 
-#include "ztools.h"
 #include "model.h"
 #include "controller.h"
 

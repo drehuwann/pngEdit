@@ -4,6 +4,7 @@
 #include "chunk.h"
 #include "engine.h"
 #include "pngfile.h"
+#include "zlib.h"
 
 // forward declarations
 
