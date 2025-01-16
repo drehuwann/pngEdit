@@ -147,6 +147,7 @@ Error ReadIHDR(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
     s_imInfo *imInfo = (s_imInfo *)data;
+_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
     static int numHeaders = 0;
     if (numHeaders != 0) return Error::BADHEADER; // not unique
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;

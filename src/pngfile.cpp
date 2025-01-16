@@ -90,6 +90,7 @@ Error PngFile::Load() {
         switch (type) {
             case ChunkType::IHDR: {
                 serData.data = malloc(sizeof(s_imInfo));
+//_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
                 errCode = chunk->Read(serData.data);
                 if (errCode == Error::NONE) {
                     //moves the data into model
