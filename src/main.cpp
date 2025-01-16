@@ -208,6 +208,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
       case WM_COMMAND: {
          if (LOWORD(wParam) == ID_Save) {}
          if (LOWORD(wParam) == ID_Load) {
+_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
             OPENFILENAME ofn;       // common dialog box structure
             char szFile[280];       // buffer for file name
             // Initialize OPENFILENAME
@@ -411,6 +412,7 @@ void MyFrame::OnSave(wxCommandEvent &/*event*/) {
 }
 
 void MyFrame::OnLoad(wxCommandEvent &/*event*/) {
+_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
    wxFileDialog ofd(this, _("Open PNG file"), "", "",
          "PNG files (*.png)|*.png", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
    if (ofd.ShowModal() == wxID_CANCEL) return;
