@@ -148,10 +148,10 @@ Error ReadUnknown(void *data, Chunk *owner) {
 Error ReadIHDR(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
-    if (!model) throw Error::REQUESTEDOBJECTNOTPRESENT;
+    if (!model) return Error::REQUESTEDOBJECTNOTPRESENT;
     s_imInfo *imInfo = (s_imInfo *)data;
     PngFile *fp = model->GetAssociatedFile();
-    if(! fp) throw Error::REQUESTEDOBJECTNOTPRESENT;
+    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
     ParseFlag pf = fp->getParseFlag();
     pf = pf & ParseFlag::IHDRseen;
     if (pf != ParseFlag::cleared)
@@ -238,10 +238,16 @@ Error ReadIHDR(void *data, Chunk *owner) {
 Error ReadPLTE(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
+    if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-    static int numPalettes = 0;
-    if (numPalettes != 0) return Error::CHUNKNOTUNIQUE;
+    PngFile *fp = model->GetAssociatedFile();
+    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
+    ParseFlag pf = fp->getParseFlag();
+    ParseFlag working_pf = (pf & ParseFlag::IDATseen);
+    if (working_pf != ParseFlag::cleared) return Error::CHUNKSHOULDNOTAPPEARTHERE;
+    working_pf = pf & ParseFlag::PLTEseen;
+    if (working_pf != ParseFlag::cleared) return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     UINT32 size = owner->GetDataSize();
     UINT32 paletteSize = size / 3;
@@ -260,7 +266,7 @@ Error ReadPLTE(void *data, Chunk *owner) {
         ++palEntry;
         --paletteSize;
     }
-    ++ numPalettes;
+    fp->setParseFlag(ParseFlag::PLTEseen);
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
     return Error::NONE;
@@ -269,18 +275,21 @@ Error ReadPLTE(void *data, Chunk *owner) {
 Error ReadIDAT(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
+    if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-    static int numIDAT = 0;
-    if (numIDAT != 0) {
+    PngFile *fp = model->GetAssociatedFile();
+    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
+    ParseFlag pf = fp->getParseFlag();
+    pf = pf & ParseFlag::IDATseen;
+    if (pf != ParseFlag::cleared) {
         if (headChunk->GetType() != ChunkType::IDAT) {
-_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
             return Error::IDATNOTCONSECUTIVE;
         }
     }
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
-    ++ numIDAT;
+    fp->setParseFlag(ParseFlag::IDATseen);
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
     return Error::NONE;

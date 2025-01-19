@@ -204,7 +204,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
       case WM_COMMAND: {
          if (LOWORD(wParam) == ID_Save) {}
          if (LOWORD(wParam) == ID_Load) {
-//_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
             OPENFILENAME ofn;       // common dialog box structure. created on the stack ?
             char szFile[280];       // buffer for file name
             // Initialize OPENFILENAME
