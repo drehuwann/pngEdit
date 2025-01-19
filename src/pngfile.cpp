@@ -1,7 +1,12 @@
 #include "pngfile.h"
 #include "htonntoh.h"
 
-PngFile::PngFile() : filepath(), fileBuffer(nullptr), model (nullptr) {
+ParseFlag operator&(const ParseFlag pf1, const ParseFlag pf2) {
+    return (ParseFlag)((UINT32)(pf1) & (UINT32)pf2);
+}
+
+PngFile::PngFile() : filepath(), fileBuffer(nullptr), model(nullptr),
+        parseflag(ParseFlag::cleared) {
 }
 
 PngFile::~PngFile() {
@@ -43,6 +48,14 @@ Error PngFile::isPng() {
 
     //Tests succesful !
     return Error::NONE;
+}
+
+ParseFlag PngFile::getParseFlag() {
+    return parseflag;
+}
+
+void PngFile::setParseFlag(ParseFlag pf) {
+    parseflag = pf;
 }
 
 Error PngFile::Load() {

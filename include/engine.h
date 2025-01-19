@@ -12,18 +12,18 @@
 #include "controller.h"
 
 //forward declarations
-
 class Model;
 class Controller;
-
 
 class Engine {
 public:
     Engine();
     ~Engine();
-
-    /// @brief Runs ztools tests and checks validity of parameters(no nullptr!).
+    
+    /// @brief Checks validity of parameters(no nullptr!).
     /// if everything is ok, copy params in Engine private fields.
+    /// if private fields were not null, asks for confirmation and free old
+    /// objects.
     /// @param modl pointer on the model
     /// @param view pointer on the view
     /// @param ctrl pointer on the controller
@@ -34,7 +34,7 @@ public:
     void *GetView();
     
 private:
-   Model *m_modl;
-   void *m_view;
-   Controller *m_ctrl;
+    Model *m_modl;
+    void *m_view; //TODO encapsulate this naked ptr in class View
+    Controller *m_ctrl;
 };

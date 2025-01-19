@@ -18,11 +18,33 @@ struct serializedData {
 const unsigned char png_signature[8] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a,
         0x1a, 0x0a};
 
+enum class ParseFlag : UINT32 {
+    cleared = 0, //used to reinit flag
+    IHDRseen = 1 << 0,  //Unique      Must be first
+    gAMAseen = 1 << 1,  //Unique      Before PLTE and IDAT
+    iCCPseen = 1 << 2,  //Unique      Before PLTE and IDAT
+    sBITseen = 1 << 3,  //Unique      Before PLTE and IDAT
+    sRGBseen = 1 << 4,  //Unique      Before PLTE and IDAT
+    cHRMseen = 1 << 5,  //Unique      Before PLTE and IDAT
+    pHYsseen = 1 << 6,  //Unique      Before IDAT
+    oFFsseen = 1 << 7,  //Unique      Before IDAT
+    pCALseen = 1 << 8,  //Unique      Before IDAT
+    sCALseen = 1 << 9,  //Unique      Before IDAT
+    sTERseen = 1 << 10, //Unique      Before IDAT
+    PLTEseen = 1 << 11, //Unique      Before IDAT
+    bKGDseen = 1 << 12, //Unique      After PLTE; before IDAT
+    hISTseen = 1 << 13, //Unique      After PLTE; before IDAT
+    tRNSseen = 1 << 14, //Unique      After PLTE; before IDAT
+    IDATseen = 1 << 15, //Multiple    Multiple IDATs must be consecutive
+    tIMEseen = 1 << 16, //Unique      None
+    eXIfseen = 1 << 17, //Unique      None
+    IENDseen = 1 << 18  //Unique      Must be last
+};
+
+ParseFlag operator&(const ParseFlag pf1, const ParseFlag pf2);
 
 // forward declarations
-
 class Model;
-
 
 class PngFile {
 public:
@@ -37,6 +59,8 @@ public:
      * @return size of file, in bytes. on error returns @ref FileError 
      */
     SSIZE_T Pick(const char *filename);
+    ParseFlag getParseFlag();
+    void setParseFlag(ParseFlag pf);
 
 private:
 
@@ -54,4 +78,5 @@ private:
     std::filesystem::path filepath;
     FILE *fileBuffer;
     Model *model;
+    ParseFlag parseflag;
 };

@@ -7,12 +7,8 @@
 
 #ifdef WIN32
 #include <tchar.h>
-#else   // WIN32
-//class MyFrame; //Fwd declaration
-//#define HWND MyFrame * => moved these 2 lines under defs.h
 #endif  // WIN32
-//#include "model.h"
-//#include "controller.h"
+
 #include "defs.h"
 #include "engine.h"
 
@@ -231,7 +227,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             if (GetOpenFileName(&ofn)==TRUE) {
                const char *utfPath = ToCstr(ofn.lpstrFile);
                Model *mod = engine->GetModel();
-//_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
                mod->PickFile(utfPath);
                if (utfPath && utfPath != (const char *)ofn.lpstrFile) {
                   delete utfPath;

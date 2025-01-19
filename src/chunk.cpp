@@ -14,6 +14,8 @@ Chunk::~Chunk() {
     if (this->isInitialized) {
         this->model->SetChunksHead(this->previous);
     } else {
+_BP_    // inserted to check if we go there
+
         // TODO Free there what must be, then cleanly resume:
         // TODO valgrind me!
         // TODO make this house of in-memory cards clean & robust #!
@@ -146,10 +148,14 @@ Error ReadUnknown(void *data, Chunk *owner) {
 Error ReadIHDR(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
+    if (!model) throw Error::REQUESTEDOBJECTNOTPRESENT;
     s_imInfo *imInfo = (s_imInfo *)data;
-_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
-    static int numHeaders = 0;
-    if (numHeaders != 0) return Error::BADHEADER; // not unique
+    PngFile *fp = model->GetAssociatedFile();
+    if(! fp) throw Error::REQUESTEDOBJECTNOTPRESENT;
+    ParseFlag pf = fp->getParseFlag();
+    pf = pf & ParseFlag::IHDRseen;
+    if (pf != ParseFlag::cleared)
+        return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     if (owner->GetDataSize() != 13) return Error::BADHEADER;
     Chunk *headChunk = model->GetChunksHead();
@@ -223,9 +229,9 @@ _BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
         return Error::BADHEADER;
     }
     imInfo->interlace = (byteRead == 1);
-    ++ numHeaders;
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
+    fp->setParseFlag(ParseFlag::IHDRseen);
     return Error::NONE;
 }
 
@@ -267,8 +273,10 @@ Error ReadIDAT(void *data, Chunk *owner) {
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
     static int numIDAT = 0;
     if (numIDAT != 0) {
-        if (headChunk->GetType() != ChunkType::IDAT)
+        if (headChunk->GetType() != ChunkType::IDAT) {
+_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
             return Error::IDATNOTCONSECUTIVE;
+        }
     }
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
@@ -625,7 +633,7 @@ Error ReadfRAc(void *data, Chunk *owner) {
     return Error::NONE;
 }
 
-/* Default template for Read() methods
+/** Default template for Read() methods
 
 Error ReadXXXX(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
