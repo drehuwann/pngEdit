@@ -119,21 +119,24 @@ Error PngFile::Load() {
                 } else {
                     serData.data = malloc(sizeof(s_paletteEntry) * paletteSize);
                     errCode = chunk->Read(serData.data);
-                    model->SetPalette((Palette)(serData.data));
-                    model->SetPaletteSize((UINT8)(0xff & (size / 3)));
+                    if (errCode == Error::NONE) {
+                        //moves the data into model
+                        model->SetPalette((Palette)(serData.data));
+                        model->SetPaletteSize((UINT8)(0xff & (size / 3)));
+                    }
                 }
                 break;
             }
             case ChunkType::IDAT: {
-                static size_t previousSize = 0;
-                static void *data = nullptr;
                 UINT32 size = chunk->GetDataSize();
                 if (size == 0) {
                     errCode = Error::IDATEMPTY;
                 } else {
-                    data = realloc(data, previousSize + size);
-                    errCode = chunk->Read((char *)data + size);
-                    if (errCode != Error::NONE) serData.data = data;
+                    serData.data = malloc(size);
+                    errCode = chunk->Read(serData.data);
+                    if (errCode == Error::NONE) {
+                        //TODO send the data to zlib
+                    }
                 }
                 break;
             }

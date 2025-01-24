@@ -276,11 +276,16 @@ Error ReadIDAT(void *data, Chunk *owner) {
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    int numIDAT = model->GetNumIDAT();
+    if (numIDAT != 0) {
+        if (headChunk->GetType() != ChunkType::IDAT) {
             return Error::IDATNOTCONSECUTIVE;
         }
     }
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
+    ++ numIDAT;
+    model->SetNumIDAT(numIDAT);
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
     return Error::NONE;
