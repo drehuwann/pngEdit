@@ -17,7 +17,6 @@
 #define BREAKPOINT __asm__("int $3\n");
 class MyFrame; //Fwd declaration
 #define HWND MyFrame *
-
 #else //POSIX
 #error nonWIn or nonPosix not implemented yet.
 #endif //POSIX
@@ -72,6 +71,7 @@ enum Error : SSIZE_T {
     IDATEMPTY = -18,
     IENDREACHED = -19,
     NOIMGINFO = -20,
-    ZTOOLSTESTFAILED = -21,
-    OTHER = -22
+    REQUESTEDOBJECTNOTPRESENT = -21,
+    CHUNKSHOULDNOTAPPEARTHERE = -22,
+    OTHER = -23
 };

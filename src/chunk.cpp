@@ -14,6 +14,8 @@ Chunk::~Chunk() {
     if (this->isInitialized) {
         this->model->SetChunksHead(this->previous);
     } else {
+_BP_    // inserted to check if we go there
+
         // TODO Free there what must be, then cleanly resume:
         // TODO valgrind me!
         // TODO make this house of in-memory cards clean & robust #!
@@ -146,9 +148,14 @@ Error ReadUnknown(void *data, Chunk *owner) {
 Error ReadIHDR(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
+    if (!model) return Error::REQUESTEDOBJECTNOTPRESENT;
     s_imInfo *imInfo = (s_imInfo *)data;
-    static int numHeaders = 0;
-    if (numHeaders != 0) return Error::BADHEADER; // not unique
+    PngFile *fp = model->GetAssociatedFile();
+    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
+    ParseFlag pf = fp->getParseFlag();
+    pf = pf & ParseFlag::IHDRseen;
+    if (pf != ParseFlag::cleared)
+        return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     if (owner->GetDataSize() != 13) return Error::BADHEADER;
     Chunk *headChunk = model->GetChunksHead();
@@ -222,19 +229,23 @@ Error ReadIHDR(void *data, Chunk *owner) {
         return Error::BADHEADER;
     }
     imInfo->interlace = (byteRead == 1);
-    ++ numHeaders;
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
+    fp->setParseFlag(ParseFlag::IHDRseen);
     return Error::NONE;
 }
 
 Error ReadPLTE(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
+    if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-    static int numPalettes = 0;
-    if (numPalettes != 0) return Error::CHUNKNOTUNIQUE;
+    if (model->GetNumIDAT()) return Error::CHUNKSHOULDNOTAPPEARTHERE; //there was already IDAT seen
+    PngFile *fp = model->GetAssociatedFile();
+    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
+    ParseFlag pf = fp->getParseFlag() & ParseFlag::PLTEseen;
+    if (pf != ParseFlag::cleared) return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     UINT32 size = owner->GetDataSize();
     UINT32 paletteSize = size / 3;
@@ -253,7 +264,7 @@ Error ReadPLTE(void *data, Chunk *owner) {
         ++palEntry;
         --paletteSize;
     }
-    ++ numPalettes;
+    fp->setParseFlag(ParseFlag::PLTEseen);
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
     return Error::NONE;
@@ -262,12 +273,14 @@ Error ReadPLTE(void *data, Chunk *owner) {
 Error ReadIDAT(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
+    if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
     int numIDAT = model->GetNumIDAT();
     if (numIDAT != 0) {
-        if (headChunk->GetType() != ChunkType::IDAT)
+        if (headChunk->GetType() != ChunkType::IDAT) {
             return Error::IDATNOTCONSECUTIVE;
+        }
     }
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
@@ -625,7 +638,7 @@ Error ReadfRAc(void *data, Chunk *owner) {
     return Error::NONE;
 }
 
-/* Default template for Read() methods
+/** Default template for Read() methods
 
 Error ReadXXXX(void *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;

@@ -17,6 +17,7 @@ Model::Model(Engine *engine) : eng(engine), headChunk(nullptr),
 }
 
 Model::~Model() {
+    while(headChunk) delete(headChunk);
     if (m_file) delete m_file;
     m_file = nullptr;
     if (m_info) delete m_info;
@@ -83,9 +84,31 @@ void Model::SetPaletteSize(UINT8 size) {
 }
 
 void Model::PickFile(const char *path) {
+    if (m_file) {
+        //TODO : ask for saving, saves eventually
+        delete m_file;
+        m_file = nullptr;
+        this->Reset();
+    }
+    m_file = new PngFile();
     m_file->SetModel(this);
     SSIZE_T err = (m_file->Pick(path));
     if (err < 0) throw err;
+}
+
+PngFile *Model::GetAssociatedFile() {
+    return m_file;
+}
+
+void Model::Reset() {
+    m_file = nullptr;
+    while(headChunk) delete headChunk;
+    m_info = nullptr;
+    //TODO free buffer and palette IMPORTANT
+    inflateBuffer = nullptr;
+    pal = nullptr;
+    palSize = 0;
+    pixelBinarySize = 0;
 }
 
 Error Model::ReserveInflateBuffer() {

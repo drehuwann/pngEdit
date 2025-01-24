@@ -59,14 +59,17 @@ public:
     UINT8 GetPaletteSize();
     void SetPaletteSize(UINT8 size);
     void PickFile(const char *path);
+    PngFile *GetAssociatedFile();
+    /// @brief force @ref m_file to nullptr
 
 private:
     Error ReserveInflateBuffer();
+    void Reset();
 
     Engine *eng;
 
     /// @brief keep track of the last read chunk.
-    /// Use it to free chunk linked list : while(headChunk) delete headChunk;
+    /// Use it to free chunk linked list : while( @ref headChunk ) delete @ref headChunk;
     /// (See ~Chunk() ...)
     Chunk *headChunk; 
 

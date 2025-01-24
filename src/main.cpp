@@ -7,12 +7,8 @@
 
 #ifdef WIN32
 #include <tchar.h>
-#else   // WIN32
-//class MyFrame; //Fwd declaration
-//#define HWND MyFrame * => moved these 2 lines under defs.h
 #endif  // WIN32
-//#include "model.h"
-//#include "controller.h"
+
 #include "defs.h"
 #include "engine.h"
 
@@ -208,7 +204,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
       case WM_COMMAND: {
          if (LOWORD(wParam) == ID_Save) {}
          if (LOWORD(wParam) == ID_Load) {
-            OPENFILENAME ofn;       // common dialog box structure
+            OPENFILENAME ofn;       // common dialog box structure. created on the stack ?
             char szFile[280];       // buffer for file name
             // Initialize OPENFILENAME
             ZeroMemory(&ofn, sizeof(ofn));
@@ -411,6 +407,8 @@ void MyFrame::OnSave(wxCommandEvent &/*event*/) {
 }
 
 void MyFrame::OnLoad(wxCommandEvent &/*event*/) {
+_BP_ //related to ISSUE [https://github.com/drehuwann/pngEdit/issues/1]
+//TODO test under wxwidgets
    wxFileDialog ofd(this, _("Open PNG file"), "", "",
          "PNG files (*.png)|*.png", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
    if (ofd.ShowModal() == wxID_CANCEL) return;
