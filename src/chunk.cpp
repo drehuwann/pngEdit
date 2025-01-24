@@ -241,13 +241,11 @@ Error ReadPLTE(void *data, Chunk *owner) {
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    if (model->GetNumIDAT()) return Error::CHUNKSHOULDNOTAPPEARTHERE; //there was already IDAT seen
     PngFile *fp = model->GetAssociatedFile();
     if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
-    ParseFlag pf = fp->getParseFlag();
-    ParseFlag working_pf = (pf & ParseFlag::IDATseen);
-    if (working_pf != ParseFlag::cleared) return Error::CHUNKSHOULDNOTAPPEARTHERE;
-    working_pf = pf & ParseFlag::PLTEseen;
-    if (working_pf != ParseFlag::cleared) return Error::CHUNKNOTUNIQUE;
+    ParseFlag pf = fp->getParseFlag() & ParseFlag::PLTEseen;
+    if (pf != ParseFlag::cleared) return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     UINT32 size = owner->GetDataSize();
     UINT32 paletteSize = size / 3;
@@ -278,18 +276,12 @@ Error ReadIDAT(void *data, Chunk *owner) {
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-    PngFile *fp = model->GetAssociatedFile();
-    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
-    ParseFlag pf = fp->getParseFlag();
-    pf = pf & ParseFlag::IDATseen;
-    if (pf != ParseFlag::cleared) {
         if (headChunk->GetType() != ChunkType::IDAT) {
             return Error::IDATNOTCONSECUTIVE;
         }
     }
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
-    fp->setParseFlag(ParseFlag::IDATseen);
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
     return Error::NONE;

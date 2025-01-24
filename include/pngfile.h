@@ -35,10 +35,9 @@ enum class ParseFlag : UINT32 {
     bKGDseen = 1 << 12, //Unique      After PLTE; before IDAT
     hISTseen = 1 << 13, //Unique      After PLTE; before IDAT
     tRNSseen = 1 << 14, //Unique      After PLTE; before IDAT
-    IDATseen = 1 << 15, //Multiple    Multiple IDATs must be consecutive
-    tIMEseen = 1 << 16, //Unique      None
-    eXIfseen = 1 << 17, //Unique      None
-    IENDseen = 1 << 18  //Unique      Must be last
+    tIMEseen = 1 << 15, //Unique      None
+    eXIfseen = 1 << 16, //Unique      None
+    IENDseen = 1 << 17  //Unique      Must be last
 };
 
 ParseFlag operator&(const ParseFlag pf1, const ParseFlag pf2);
