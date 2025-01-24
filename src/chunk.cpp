@@ -276,7 +276,6 @@ Error ReadIDAT(void *data, Chunk *owner) {
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-        if (headChunk->GetType() != ChunkType::IDAT) {
             return Error::IDATNOTCONSECUTIVE;
         }
     }
