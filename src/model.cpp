@@ -12,7 +12,7 @@ static inline size_t Ceil(const size_t num, const size_t den) {
 
 Model::Model(Engine *engine) : eng(engine), headChunk(nullptr),
         m_file(nullptr), m_info(nullptr), inflateBuffer(nullptr), pal(nullptr), 
-        palSize(0), pixelBinarySize(0) {
+        numIDAT(0), palSize(0), pixelBinarySize(0) {
     m_file = new PngFile();
 }
 
@@ -64,6 +64,14 @@ Palette Model::GetPalette() {
 
 void Model::SetPalette(Palette palette) {
     this->pal = palette;
+}
+
+int Model::GetNumIDAT() {
+    return numIDAT;
+}
+
+void Model::SetNumIDAT(int num) {
+    numIDAT = num;
 }
 
 UINT8 Model::GetPaletteSize() {

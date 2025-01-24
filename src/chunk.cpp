@@ -264,7 +264,7 @@ Error ReadIDAT(void *data, Chunk *owner) {
     Model *model = owner->GetModel();
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-    static int numIDAT = 0;
+    int numIDAT = model->GetNumIDAT();
     if (numIDAT != 0) {
         if (headChunk->GetType() != ChunkType::IDAT)
             return Error::IDATNOTCONSECUTIVE;
@@ -272,6 +272,7 @@ Error ReadIDAT(void *data, Chunk *owner) {
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
     ++ numIDAT;
+    model->SetNumIDAT(numIDAT);
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
     return Error::NONE;
