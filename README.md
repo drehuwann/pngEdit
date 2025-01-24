@@ -20,5 +20,3 @@ in zlib CMakelists.txt<br>
 Parsing of many chunk types (as <code>ChunkError Read....(void *, Chunk *)</code> functions) still need to be implemented.<br>
 We don't use libpng, so the reference document should be [png specifications](https://www.w3.org/TR/png-3)<br>
 <br>
-Actually, opening a second file in the editor crashes. (exit with code 377 (0x00000179) on *nix)<br>
-Debug and fix this !<br>
