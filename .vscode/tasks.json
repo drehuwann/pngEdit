@@ -13,7 +13,7 @@
                 "problemMatcher": "$msCompile"
             },
             "linux": {
-                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build .; cd src; cp pngEditor ../../output;  cd ../../.vscode; ln -sf ./launchLin.json launch.json; popd",
+                "command": "pushd ${workspaceFolder}/build; mkdir -pv deb; cd deb; cmake -DCMAKE_BUILD_TYPE=Debug ../..; cmake --build .; cd src; cp pngEditor ../../../output;  cd ../../../.vscode; ln -sf ./launchLin.json launch.json; popd",
                 "problemMatcher": "$gcc"
             },
             "osx": {
@@ -32,7 +32,7 @@
                 "problemMatcher": "$msCompile"
             },
             "linux": {
-                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build . --config Release; cd src; cp pngEditor ../../output; cd ../../.vscode; ln -sf ./launchLin.json launch.json; popd",
+                "command": "pushd ${workspaceFolder}/build; mkdir -pv rel; cd rel; cmake -DCMAKE_BUILD_TYPE=Release ../..; cmake --build .; cd src; cp pngEditor ../../../output;  cd ../../../.vscode; ln -sf ./launchLin.json launch.json; popd",
                 "problemMatcher": "$gcc"
             },
             "osx": {
