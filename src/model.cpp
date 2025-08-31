@@ -107,6 +107,7 @@ void Model::Reset() {
     //TODO free buffer and palette IMPORTANT
     inflateBuffer = nullptr;
     pal = nullptr;
+    numIDAT = 0;
     palSize = 0;
     pixelBinarySize = 0;
 }
