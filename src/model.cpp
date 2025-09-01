@@ -157,6 +157,7 @@ Error Model::ReserveInflateBuffer() {
         scanlineSize ++; // +1 byte for filter type
         bufferSize = scanlineSize * this->m_info->height;
     }
-    //TODO Allocate buffer.
+    //TODO Allocate buffer. next line suppress warning set_butnot_used
+    if (bufferSize) {}
     return Error::NONE;
 }

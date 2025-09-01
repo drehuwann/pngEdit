@@ -49,7 +49,7 @@ eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
     #define _BP_  //defines _BP_ to NULL
 #endif  // _DEBUG
 
-enum Error : SSIZE_T {
+enum class Error : SSIZE_T {
     NONE = 0,
     NOFILENAME = -1,
     FAILOPEN = -2,

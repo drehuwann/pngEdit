@@ -8,6 +8,16 @@ cbRead readFn[(int)(ChunkType::TAGS_ARRAY_SIZE)] = { ReadUnknown,
     ReadgIFg, ReadgIFt, ReadgIFx, ReadsTER, ReaddSIG, ReadeXIf, ReadfRAc
 };
 
+const char typeTag[(int)(ChunkType::TAGS_ARRAY_SIZE)][4] = {"\0\0\0",
+    {'I','H','D','R'}, {'P','L','T','E'}, {'I','D','A','T'}, {'I','E','N','D'},
+    {'c','H','R','M'}, {'g','A','M','A'}, {'i','C','C','P'}, {'s','B','I','T'},
+    {'s','R','G','B'}, {'b','K','G','D'}, {'h','I','S','T'}, {'t','R','N','S'},
+    {'p','H','Y','s'}, {'s','P','L','T'}, {'t','I','M','E'}, {'i','T','X','t'},
+    {'t','E','X','t'}, {'z','T','X','t'}, {'o','F','F','s'}, {'p','C','A','L'},
+    {'s','C','A','L'}, {'g','I','F','g'}, {'g','I','F','t'}, {'g','I','F','x'},
+    {'s','T','E','R'}, {'d','S','I','G'}, {'e','X','I','f'}, {'f','R','A','c'}
+};
+
 Chunk::~Chunk() {
     if (crcString) free(crcString);
     crcString = nullptr;
@@ -138,6 +148,7 @@ Error ReadUnknown(void *data, Chunk *owner) {
     //TODO : popup modal to Ask Load or Ignore this chunk
     model->SetChunksHead(owner);
     unsigned char *buf = owner->GetCrcString();
+    if (buf) {} // remove set_but_not_used warning
     buf += 4; // jump over 'type' field
     buf += owner->GetDataSize(); // Actually don't read
     owner->SetPrevious(headChunk);

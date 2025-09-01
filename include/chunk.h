@@ -4,7 +4,6 @@
 #include <basetsd.h>
 #endif  // WIN32
 #include <cstdio>
-#include <bitset>
 #include "engine.h"
 #include "defs.h"
 #include "model.h"
@@ -50,16 +49,6 @@ enum class ChunkType : int {
 
     /// @brief should be casted to int to reflect the number of ChunkTypes.
     TAGS_ARRAY_SIZE
-};
-
-const char typeTag[(int)(ChunkType::TAGS_ARRAY_SIZE)][4] = {"\0\0\0",
-    {'I','H','D','R'}, {'P','L','T','E'}, {'I','D','A','T'}, {'I','E','N','D'},
-    {'c','H','R','M'}, {'g','A','M','A'}, {'i','C','C','P'}, {'s','B','I','T'},
-    {'s','R','G','B'}, {'b','K','G','D'}, {'h','I','S','T'}, {'t','R','N','S'},
-    {'p','H','Y','s'}, {'s','P','L','T'}, {'t','I','M','E'}, {'i','T','X','t'},
-    {'t','E','X','t'}, {'z','T','X','t'}, {'o','F','F','s'}, {'p','C','A','L'},
-    {'s','C','A','L'}, {'g','I','F','g'}, {'g','I','F','t'}, {'g','I','F','x'},
-    {'s','T','E','R'}, {'d','S','I','G'}, {'e','X','I','f'}, {'f','R','A','c'}
 };
 
 class Chunk;

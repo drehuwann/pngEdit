@@ -9,7 +9,7 @@
             },
             "type": "shell",
             "windows": {
-                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build .; cd src; cp Debug/pngEditor.exe ../../output; cd ../zlib; cp Debug/zlibd.dll ../../output; cd ../../.vscode; cp launchWin.json launch.json; popd",
+                "command": "pushd ${workspaceFolder}/build; cmake -G'NMake Makefiles' ..; cmake --build .; cp src/pngEditor.exe ../output/; cp zlib/zlibd.dll ../output/; cd ../.vscode; cp launchWin.json launch.json; popd",
                 "problemMatcher": "$msCompile"
             },
             "linux": {
@@ -28,7 +28,7 @@
             },
             "type": "shell",
             "windows": {
-                "command": "pushd ${workspaceFolder}/build; cmake ..; cmake --build . --config Release; cd src; cp Release/pngEditor.exe ../../output; cd ../zlib; cp Release/zlib.dll ../../output; cd ../../.vscode; cp launchWin.json launch.json; popd",
+                "command": "pushd ${workspaceFolder}/build; cmake -G'NMake Makefiles' ..; cmake --build . --config Release; cp src/pngEditor.exe ../output/; cp zlib/zlib.dll ../output/; cd ../.vscode; cp launchWin.json launch.json; popd",
                 "problemMatcher": "$msCompile"
             },
             "linux": {

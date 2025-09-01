@@ -1,9 +1,13 @@
 #include "pngfile.h"
 #include "htonntoh.h"
+#include "utf4win.h"
 
 ParseFlag operator&(const ParseFlag pf1, const ParseFlag pf2) {
     return (ParseFlag)((UINT32)(pf1) & (UINT32)pf2);
 }
+
+const unsigned char png_signature[8] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a,
+        0x1a, 0x0a};
 
 PngFile::PngFile() : filepath(), fileBuffer(nullptr), model(nullptr),
         parseflag(ParseFlag::cleared) {
@@ -19,10 +23,11 @@ Error PngFile::SetModel(Model *mod) {
 }
 
 SSIZE_T PngFile::Pick(const char *filename) {
-    if (*filename == 0) return Error::NOFILENAME;
+    if (*filename == 0) return static_cast<SSIZE_T>(Error::NOFILENAME);
     filepath = std::filesystem::path(filename);
     Error errCode = Load();
-    return (errCode != Error::NONE) ? (SSIZE_T)errCode : std::filesystem::file_size(filepath);
+    return (errCode != Error::NONE) ? static_cast<SSIZE_T>(errCode) :
+        static_cast<SSIZE_T>(std::filesystem::file_size(filepath));
 }
 
 Error PngFile::isPng() {

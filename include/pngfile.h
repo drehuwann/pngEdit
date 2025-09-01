@@ -1,12 +1,11 @@
 #pragma once
 
 #include "chunk.h"
-#include "utf4win.h"
 #include "defs.h"
 #include "model.h"
 #include <cstdio>
 #include <filesystem>
-#include <vector>
+//#include <vector>
 
 enum class ChunkType : int;
 
@@ -14,9 +13,6 @@ struct serializedData {
     ChunkType type;
     void *data;
 };
-
-const unsigned char png_signature[8] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a,
-        0x1a, 0x0a};
 
 enum class ParseFlag : UINT32 {
     cleared = 0, //used to reinit flag
