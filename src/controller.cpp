@@ -2,7 +2,7 @@
 
 Controller::Controller(Engine *engine) : eng(engine) {}
 
-Controller::~Controller() {}
+Controller::~Controller() = default;
 
 Engine *Controller::GetEngine() {
     return this->eng;

@@ -52,77 +52,54 @@ enum class ChunkType : int {
 };
 
 class Chunk;
-typedef Error(*cbRead)(void *data, Chunk *owner);
+using cbRead = Error (*)(UINT8 *data, Chunk *owner);
 
-Error ReadUnknown(void *data, Chunk *owner);
-Error ReadIHDR(void *data, Chunk *owner);
-Error ReadPLTE(void *data, Chunk *owner);
-Error ReadIDAT(void *data, Chunk *owner);
-Error ReadIEND(void *data, Chunk *owner);
-Error ReadcHRM(void *data, Chunk *owner);
-Error ReadgAMA(void *data, Chunk *owner);
-Error ReadiCCP(void *data, Chunk *owner);
-Error ReadsBIT(void *data, Chunk *owner);
-Error ReadsRGB(void *data, Chunk *owner);
-Error ReadbKGD(void *data, Chunk *owner);
-Error ReadhIST(void *data, Chunk *owner);
-Error ReadtRNS(void *data, Chunk *owner);
-Error ReadpHYs(void *data, Chunk *owner);
-Error ReadsPLT(void *data, Chunk *owner);
-Error ReadtIME(void *data, Chunk *owner);
-Error ReadiTXt(void *data, Chunk *owner);
-Error ReadtEXt(void *data, Chunk *owner);
-Error ReadzTXt(void *data, Chunk *owner);
-Error ReadoFFs(void *data, Chunk *owner);
-Error ReadpCAL(void *data, Chunk *owner);
-Error ReadsCAL(void *data, Chunk *owner);
-Error ReadgIFg(void *data, Chunk *owner);
-Error ReadgIFt(void *data, Chunk *owner);
-Error ReadgIFx(void *data, Chunk *owner);
-Error ReadsTER(void *data, Chunk *owner);
-Error ReaddSIG(void *data, Chunk *owner);
-Error ReadeXIf(void *data, Chunk *owner);
-Error ReadfRAc(void *data, Chunk *owner);
+Error ReadUnknown(UINT8 *data, Chunk *owner);
+Error ReadIHDR(UINT8 *data, Chunk *owner);
+Error ReadPLTE(UINT8 *data, Chunk *owner);
+Error ReadIDAT(UINT8 *data, Chunk *owner);
+Error ReadIEND(UINT8 *data, Chunk *owner);
+Error ReadcHRM(UINT8 *data, Chunk *owner);
+Error ReadgAMA(UINT8 *data, Chunk *owner);
+Error ReadiCCP(UINT8 *data, Chunk *owner);
+Error ReadsBIT(UINT8 *data, Chunk *owner);
+Error ReadsRGB(UINT8 *data, Chunk *owner);
+Error ReadbKGD(UINT8 *data, Chunk *owner);
+Error ReadhIST(UINT8 *data, Chunk *owner);
+Error ReadtRNS(UINT8 *data, Chunk *owner);
+Error ReadpHYs(UINT8 *data, Chunk *owner);
+Error ReadsPLT(UINT8 *data, Chunk *owner);
+Error ReadtIME(UINT8 *data, Chunk *owner);
+Error ReadiTXt(UINT8 *data, Chunk *owner);
+Error ReadtEXt(UINT8 *data, Chunk *owner);
+Error ReadzTXt(UINT8 *data, Chunk *owner);
+Error ReadoFFs(UINT8 *data, Chunk *owner);
+Error ReadpCAL(UINT8 *data, Chunk *owner);
+Error ReadsCAL(UINT8 *data, Chunk *owner);
+Error ReadgIFg(UINT8 *data, Chunk *owner);
+Error ReadgIFt(UINT8 *data, Chunk *owner);
+Error ReadgIFx(UINT8 *data, Chunk *owner);
+Error ReadsTER(UINT8 *data, Chunk *owner);
+Error ReaddSIG(UINT8 *data, Chunk *owner);
+Error ReadeXIf(UINT8 *data, Chunk *owner);
+Error ReadfRAc(UINT8 *data, Chunk *owner);
 
 class Chunk {
 public:
-    Chunk(FILE *fileSeek, Model *mod) :
-                            model(mod),
-                            crcString(nullptr),
-                            previous(nullptr),
-                            file(fileSeek),
-                            readCRC(0),
-                            calcCRC(0),
-                            size(0),
-                            ttag(0),
-                            m_type(ChunkType::Unknown),
-                            isInitialized(false) {};
-
-/*    Chunk(const Chunk &c) : 
-                            model(c.model),
-                            crcString(c.crcString),
-                            previous(c.previous),
-                            file(c.file),
-                            readCRC(c.readCRC),
-                            calcCRC(c.calcCRC),
-                            size(c.size),
-                            ttag(c.typeTag),
-                            m_type(c.m_type),
-                            isInitialized(c.isInitialized) {};
-*/
+    Chunk(FILE *fileSeek, Model *mod) : model(mod), file(fileSeek) {};
 
     /// @brief checks this->isInitialized, and free resources accordingly
     virtual ~Chunk();
     
-    ChunkType GetType() {
+    ChunkType GetType() const {
         return m_type;
     };
     
-    UINT32 GetTypeTag() {
+    UINT32 GetTypeTag() const {
         return ttag;
     };
 
-    UINT32 GetDataSize() {
+    UINT32 GetDataSize() const {
         return size;
     };
 
@@ -134,25 +111,25 @@ public:
      */
     enum Error Init();
 
-    Error Read(void *data);
+    Error Read(UINT8 *data);
 
     bool TestCRC();
     void ComputeCRC();
     Chunk *GetPrevious();
     void SetPrevious(Chunk *prev);
     Model *GetModel();
-    bool GetInitStatus();
+    bool GetInitStatus() const;
     unsigned char *GetCrcString();
 
 private:
     Model *model;
-    unsigned char *crcString;
-    Chunk *previous;
+    unsigned char *crcString = nullptr;
+    Chunk *previous = nullptr;
     FILE *file;
-    UINT32 readCRC;
-    UINT32 calcCRC;
-    UINT32 size;
-    UINT32 ttag; //type tag seen as uint32_t
-    ChunkType m_type;
-    bool isInitialized;
+    UINT32 readCRC = 0;
+    UINT32 calcCRC = 0;
+    UINT32 size = 0;
+    UINT32 ttag = 0; //type tag seen as uint32_t
+    ChunkType m_type = ChunkType::Unknown;
+    bool isInitialized = false;
 };

@@ -8,39 +8,36 @@
 #include "zconf.h"
 
 // forward declarations
-
 class Chunk;
 class Engine;
 class PngFile;
 
-
 struct s_imInfo {
-    s_imInfo() : width(0), height(0), colourTypeDepthFlag(0),
-        interlace(false) {};
-    UINT32 width;
-    UINT32 height;
+    s_imInfo() = default;
+    UINT32 width = 0;
+    UINT32 height = 0;
     union {
         struct {
             std::bitset<5> bitDepth;
             std::bitset<3> colourType;
         } bitfield;
-        UINT8 colourTypeDepthFlag;
+        UINT8 colourTypeDepthFlag = 0;
     };
-    bool interlace;
+    bool interlace = false;
 };
 
 struct s_paletteEntry {
-    s_paletteEntry() : red(0), green(0), blue(0) {};
-    UINT8 red;
-    UINT8 green;
-    UINT8 blue;
+    s_paletteEntry() = default;
+    UINT8 red = 0;
+    UINT8 green = 0;
+    UINT8 blue = 0;
 } /*__packed*/;
 
-typedef s_paletteEntry* Palette;
+using Palette = s_paletteEntry *;
 
 class Model {
 public:
-    Model(Engine *eng);
+    explicit Model(Engine *eng);
     ~Model();
 
     Engine *GetEngine();
@@ -55,9 +52,9 @@ public:
     void SetChunksHead(Chunk *head);
     Palette GetPalette();
     void SetPalette(Palette palette);
-    int GetNumIDAT();
+    int GetNumIDAT() const;
     void SetNumIDAT(int num);
-    UINT8 GetPaletteSize();
+    UINT8 GetPaletteSize() const;
     void SetPaletteSize(UINT8 size);
     void PickFile(const char *path);
     PngFile *GetAssociatedFile();

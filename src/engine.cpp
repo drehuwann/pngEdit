@@ -2,7 +2,7 @@
 
 Engine::Engine() : m_modl(nullptr), m_view(nullptr), m_ctrl(nullptr) {}
 
-Engine::~Engine() {}
+Engine::~Engine() = default;
 
 Error Engine::Init(Model *modl, void *view, Controller *ctrl) {
     if (! modl || ! view || ! ctrl) return Error::NOTINITIALIZED;

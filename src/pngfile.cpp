@@ -1,20 +1,22 @@
 #include "pngfile.h"
 #include "htonntoh.h"
 #include "utf4win.h"
+#include <array>
+
+using std::array;
+
+constexpr array<const UINT8, 8> png_signature = {0x89, 0x50, 0x4e, 0x47,
+                                                 0x0d, 0x0a, 0x1a, 0x0a};
 
 ParseFlag operator&(const ParseFlag pf1, const ParseFlag pf2) {
-    return (ParseFlag)((UINT32)(pf1) & (UINT32)pf2);
+  return (ParseFlag)((UINT32)(pf1) & (UINT32)pf2);
 }
-
-const unsigned char png_signature[8] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a,
-        0x1a, 0x0a};
 
 PngFile::PngFile() : filepath(), fileBuffer(nullptr), model(nullptr),
         parseflag(ParseFlag::cleared) {
 }
 
-PngFile::~PngFile() {
-}
+PngFile::~PngFile() = default;
 
 Error PngFile::SetModel(Model *mod) {
     if (!mod) return Error::MEMORYERROR;
@@ -31,7 +33,7 @@ SSIZE_T PngFile::Pick(const char *filename) {
 }
 
 Error PngFile::isPng() {
-    unsigned char signature[8];
+    array<UINT8, 8> signature;
     if (! std::fread(&signature, 8 , 1, fileBuffer)) return Error::FAILREAD;
     int it = 0;
     while (it < 8) {
@@ -43,7 +45,7 @@ Error PngFile::isPng() {
     UINT32 buf = 0;
     if (! std::fread(&buf, sizeof(buf) , 1, fileBuffer)) return Error::FAILREAD;
     if (ntoh(buf) != 13) return Error::BADHEADER;
-    char tag[4] = "\0\0\0";
+    array<UINT8, 4> tag = {0x00, 0x00, 0x00, 0x00};
     if (! std::fread(&tag, sizeof(tag) , 1, fileBuffer)) return Error::FAILREAD;
     if ((tag[0] != 'I') || (tag[1] != 'H') || (tag[2] != 'D') || (tag[3] != 'R')) return Error::BADHEADER;
 
@@ -55,7 +57,7 @@ Error PngFile::isPng() {
     return Error::NONE;
 }
 
-ParseFlag PngFile::getParseFlag() {
+ParseFlag PngFile::getParseFlag() const {
     return parseflag;
 }
 
@@ -65,7 +67,7 @@ void PngFile::setParseFlag(ParseFlag pf) {
 
 Error PngFile::Load() {
 #ifdef WIN32
-    LPCTSTR inStr = (LPCTSTR)(filepath.c_str());
+    auto inStr = (LPCTSTR)(filepath.c_str());
     const char *cStr = ToCstr(inStr);
     if (fopen_s(&fileBuffer, cStr, "rb")) {
         return Error::FAILOPEN;
@@ -93,7 +95,7 @@ Error PngFile::Load() {
 
     // Now parse chunks : 
     while (errCode == Error::NONE) {
-        Chunk *chunk = new Chunk(fileBuffer, this->model);
+        auto *chunk = new Chunk(fileBuffer, this->model);
         if (!chunk) return Error::MEMORYERROR;
         errCode = chunk->Init();
         if (errCode != Error::NONE) {
@@ -107,7 +109,7 @@ Error PngFile::Load() {
         serData.type = type;
         switch (type) {
             case ChunkType::IHDR: {
-                serData.data = malloc(sizeof(s_imInfo));
+                serData.data = (UINT8 *)malloc(sizeof(s_imInfo));
                 errCode = chunk->Read(serData.data);
                 if (errCode == Error::NONE) {
                     //moves the data into model
@@ -118,31 +120,31 @@ Error PngFile::Load() {
             case ChunkType::PLTE: {
                 UINT32 size = chunk->GetDataSize();
                 UINT32 paletteSize = size / 3;
-                UINT16 MaxPaletteSize = 1 << ((model->GetInfo()->bitfield.bitDepth).to_ulong()); //computed palSize from bitdepth. 
-                if ((size % 3 ) || ((size/3) > (UINT32)MaxPaletteSize)) {
-                    errCode = Error::BADPALETTE;
-                } else {
-                    serData.data = malloc(sizeof(s_paletteEntry) * paletteSize);
-                    errCode = chunk->Read(serData.data);
-                    if (errCode == Error::NONE) {
-                        //moves the data into model
-                        model->SetPalette((Palette)(serData.data));
-                        model->SetPaletteSize((UINT8)(0xff & (size / 3)));
-                    }
+                /// MaxPaletteSize = computed palSize from bitdepth. 
+                if (auto MaxPaletteSize = (UINT16)(1 << ((model->GetInfo()->bitfield.bitDepth).to_ulong()));
+                    size % 3 || (size / 3) > (UINT32)MaxPaletteSize) {
+                        errCode = Error::BADPALETTE;
+                        break;
                 }
+                serData.data = (UINT8 *)malloc(sizeof(s_paletteEntry) * paletteSize);
+                errCode = chunk->Read(serData.data);
+                if (errCode != Error::NONE) break;
+                //moves the data into model
+                model->SetPalette((Palette)(serData.data));
+                model->SetPaletteSize((UINT8)(0xff & (size / 3)));
                 break;
             }
             case ChunkType::IDAT: {
-                UINT32 size = chunk->GetDataSize();
-                if (size == 0) {
+                UINT32 size;
+                if ((size = chunk->GetDataSize() == 0)) {
                     errCode = Error::IDATEMPTY;
-                } else {
-                    serData.data = malloc(size);
-                    errCode = chunk->Read(serData.data);
-                    if (errCode == Error::NONE) {
-                        //TODO send the data to zlib
-                    }
+                    break;
                 }
+                serData.data = (UINT8 *)malloc(size);
+                errCode = chunk->Read(serData.data);
+                if (errCode != Error::NONE) break;
+                //TODO send the data to zlib
+                errCode = Error::NONE; //asserting we managed to hook zlib
                 break;
             }
             case ChunkType::IEND: {
@@ -155,7 +157,7 @@ Error PngFile::Load() {
                 break;
             }
             default: {
-                serData.data = malloc(chunk->GetDataSize());
+                serData.data = (UINT8 *)malloc(chunk->GetDataSize());
                 errCode = chunk->Read(serData.data);
                 break;
             }

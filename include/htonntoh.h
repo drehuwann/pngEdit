@@ -11,12 +11,14 @@
 
 #pragma once
 
+#ifdef WIN32
+#include <winsock2.h>
+#endif  // WIN32
+
 template <typename T> T ntoh(T integral);
 template <typename T> T hton(T integral);
 
 #ifdef WIN32
-#include <winsock2.h>
-
 #if REG_DWORD == REG_DWORD_LITTLE_ENDIAN
     inline UINT16 ntoh(UINT16 integral) {return ntohs(integral);}
     inline UINT16 hton(UINT16 integral) {return htons(integral);}

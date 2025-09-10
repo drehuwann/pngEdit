@@ -5,13 +5,12 @@
 #include "model.h"
 #include <cstdio>
 #include <filesystem>
-//#include <vector>
 
 enum class ChunkType : int;
 
 struct serializedData {
     ChunkType type;
-    void *data;
+    UINT8 *data;
 };
 
 enum class ParseFlag : UINT32 {
@@ -54,7 +53,7 @@ public:
      * @return size of file, in bytes. on error returns @ref FileError 
      */
     SSIZE_T Pick(const char *filename);
-    ParseFlag getParseFlag();
+    ParseFlag getParseFlag() const;
     void setParseFlag(ParseFlag pf);
 
 private:

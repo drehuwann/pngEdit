@@ -1,9 +1,9 @@
 #include "model.h"
 
 /** @brief utility function used in scanline size calculations
-/// @param num(erator)
-/// @param den(ominator) 
-/// @return num / den, rounded up.*/
+ *  @param num(erator)
+ *  @param den(ominator) 
+ *  @return num / den, rounded up.*/
 static inline size_t Ceil(const size_t num, const size_t den) {
     size_t res = num / den;
     if (num % den) res ++;
@@ -16,7 +16,7 @@ Model::Model(Engine *engine) : eng(engine), headChunk(nullptr),
 }
 
 Model::~Model() {
-    while(headChunk) delete(headChunk);
+    while(headChunk) delete headChunk;
     if (m_file) delete m_file;
     m_file = nullptr;
     if (m_info) delete m_info;
@@ -66,7 +66,7 @@ void Model::SetPalette(Palette palette) {
     this->pal = palette;
 }
 
-int Model::GetNumIDAT() {
+int Model::GetNumIDAT() const {
     return numIDAT;
 }
 
@@ -74,7 +74,7 @@ void Model::SetNumIDAT(int num) {
     numIDAT = num;
 }
 
-UINT8 Model::GetPaletteSize() {
+UINT8 Model::GetPaletteSize() const {
     return this->palSize;
 }
 
@@ -157,7 +157,9 @@ Error Model::ReserveInflateBuffer() {
         scanlineSize ++; // +1 byte for filter type
         bufferSize = scanlineSize * this->m_info->height;
     }
-    //TODO Allocate buffer. next line suppress warning set_butnot_used
-    if (bufferSize) {}
+    //TODO Allocate buffer.
+    if (bufferSize) {
+        // suppress warning set_butnot_used
+    }
     return Error::NONE;
 }

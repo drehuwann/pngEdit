@@ -13,7 +13,7 @@ const char *ToCstr(LPCTSTR tStr) {
    size_t inSize = lstrlen(tStr);
    size_t outSize;
    wcstombs_s(&outSize, nullptr, 0, tStr, inSize);
-   char *toRet = new char[outSize];
+   auto *toRet = new char[outSize];
    wcstombs_s(&outSize, toRet, outSize, tStr, inSize);
    return (const char *)toRet;
 }
@@ -30,7 +30,7 @@ LPCTSTR FromCstr(const char *tStr) {
    size_t inSize = strlen(tStr);
    size_t outSize;
    mbstowcs_s(&outSize, nullptr, 0, tStr, inSize);
-   LPTSTR toRet = new TCHAR[outSize];
+   auto toRet = new TCHAR[outSize];
    mbstowcs_s(&outSize, toRet, outSize, tStr, inSize);
    return (LPCTSTR)toRet;
 }

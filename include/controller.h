@@ -9,7 +9,7 @@ class Engine;
 
 class Controller {
 public:
-    Controller(Engine *engine);
+    explicit Controller(Engine *engine);
     ~Controller();
 
     Engine *GetEngine();

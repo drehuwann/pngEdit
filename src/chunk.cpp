@@ -1,22 +1,30 @@
 #include "chunk.h"
 #include "htonntoh.h"
+#include "crc32_c.h"
+#include <array>
 
-cbRead readFn[(int)(ChunkType::TAGS_ARRAY_SIZE)] = { ReadUnknown,
-    ReadIHDR, ReadPLTE, ReadIDAT, ReadIEND, ReadcHRM, ReadgAMA, ReadiCCP,
-    ReadsBIT, ReadsRGB, ReadbKGD, ReadhIST, ReadtRNS, ReadpHYs, ReadsPLT,
-    ReadtIME, ReadiTXt, ReadtEXt, ReadzTXt, ReadoFFs, ReadpCAL, ReadsCAL,
-    ReadgIFg, ReadgIFt, ReadgIFx, ReadsTER, ReaddSIG, ReadeXIf, ReadfRAc
-};
+using std::array;
 
-const char typeTag[(int)(ChunkType::TAGS_ARRAY_SIZE)][4] = {"\0\0\0",
-    {'I','H','D','R'}, {'P','L','T','E'}, {'I','D','A','T'}, {'I','E','N','D'},
-    {'c','H','R','M'}, {'g','A','M','A'}, {'i','C','C','P'}, {'s','B','I','T'},
-    {'s','R','G','B'}, {'b','K','G','D'}, {'h','I','S','T'}, {'t','R','N','S'},
-    {'p','H','Y','s'}, {'s','P','L','T'}, {'t','I','M','E'}, {'i','T','X','t'},
-    {'t','E','X','t'}, {'z','T','X','t'}, {'o','F','F','s'}, {'p','C','A','L'},
-    {'s','C','A','L'}, {'g','I','F','g'}, {'g','I','F','t'}, {'g','I','F','x'},
-    {'s','T','E','R'}, {'d','S','I','G'}, {'e','X','I','f'}, {'f','R','A','c'}
-};
+const array<cbRead, static_cast<size_t>(ChunkType::TAGS_ARRAY_SIZE)>
+    readFn = {ReadUnknown, ReadIHDR, ReadPLTE, ReadIDAT, ReadIEND, ReadcHRM,
+              ReadgAMA,    ReadiCCP, ReadsBIT, ReadsRGB, ReadbKGD, ReadhIST,
+              ReadtRNS,    ReadpHYs, ReadsPLT, ReadtIME, ReadiTXt, ReadtEXt,
+              ReadzTXt,    ReadoFFs, ReadpCAL, ReadsCAL, ReadgIFg, ReadgIFt,
+              ReadgIFx,    ReadsTER, ReaddSIG, ReadeXIf, ReadfRAc};
+
+static constexpr array<array<char, 4>, static_cast<std::size_t>(ChunkType::TAGS_ARRAY_SIZE)> typeTag = {{
+    {{'\0', '\0', '\0', '\0'}},
+    {{'I', 'H', 'D', 'R'}}, {{'P', 'L', 'T', 'E'}}, {{'I', 'D', 'A', 'T'}},
+    {{'I', 'E', 'N', 'D'}}, {{'c', 'H', 'R', 'M'}}, {{'g', 'A', 'M', 'A'}},
+    {{'i', 'C', 'C', 'P'}}, {{'s', 'B', 'I', 'T'}}, {{'s', 'R', 'G', 'B'}},
+    {{'b', 'K', 'G', 'D'}}, {{'h', 'I', 'S', 'T'}}, {{'t', 'R', 'N', 'S'}},
+    {{'p', 'H', 'Y', 's'}}, {{'s', 'P', 'L', 'T'}}, {{'t', 'I', 'M', 'E'}},
+    {{'i', 'T', 'X', 't'}}, {{'t', 'E', 'X', 't'}}, {{'z', 'T', 'X', 't'}},
+    {{'o', 'F', 'F', 's'}}, {{'p', 'C', 'A', 'L'}}, {{'s', 'C', 'A', 'L'}},
+    {{'g', 'I', 'F', 'g'}}, {{'g', 'I', 'F', 't'}}, {{'g', 'I', 'F', 'x'}},
+    {{'s', 'T', 'E', 'R'}}, {{'d', 'S', 'I', 'G'}}, {{'e', 'X', 'I', 'f'}},
+    {{'f', 'R', 'A', 'c'}}
+}};
 
 Chunk::~Chunk() {
     if (crcString) free(crcString);
@@ -37,45 +45,9 @@ bool Chunk::TestCRC() {
     return (calcCRC == readCRC);
 };
 
-void Chunk::ComputeCRC()  {
-    /* Table of CRCs of all 8-bit messages. */
-    static unsigned long crc_table[256];
-
-    /* Flag: has the table been computed? Initially false. */
-    static int crc_table_computed = 0;
-        
-    /* Make the table for a fast CRC. */
-    if (!crc_table_computed) {
-        unsigned long c;
-        int n, k;
-        for (n = 0; n < 256; n++) {
-            c = (unsigned long) n;
-            for (k = 0; k < 8; k++) {
-                if (c & 1) {
-                    c = 0xedb88320L ^ (c >> 1);
-                } else {
-                    c = c >> 1;
-                }
-            }
-            crc_table[n] = c;
-        }
-        crc_table_computed = 1;
-    }
-    
-    /* Update a running CRC with the bytes buf[0..len-1]--the CRC
-    should be initialized to all 1's, and the transmitted value
-    is the 1's complement of the final running CRC. */
-        
-    unsigned long c = 0xffffffffL;
-    size_t n;
-    unsigned char *buf = (unsigned char *)crcString;
-    if (! buf) throw;
-    size_t len = (size_t)(size + 4);
-    
-    for (n = 0; n < len; n++) {
-        c = crc_table[(c ^ buf[n]) & 0xff] ^ (c >> 8);
-    }
-    calcCRC = (UINT32)(c ^ 0xffffffffL);
+void Chunk::ComputeCRC() {
+    auto buf = reinterpret_cast<const unsigned char*>(crcString);
+    calcCRC = crc32_compute(buf, size + 4);
 }
 
 Chunk *Chunk::GetPrevious() {
@@ -90,7 +62,7 @@ Model *Chunk::GetModel() {
     return this->model;
 }
 
-bool Chunk::GetInitStatus() {
+bool Chunk::GetInitStatus() const {
     return this->isInitialized;
 }
 
@@ -117,9 +89,9 @@ Error Chunk::Init() {
         free(crcString);
         return Error::BADCRC;
     }
-    int it = (int)(ChunkType::Unknown);
+    auto it = (int)(ChunkType::Unknown);
     UINT32 chunkTag = *((UINT32 *)crcString);
-    UINT32 *p_testTag = (UINT32 *)(&typeTag);
+    auto const *p_testTag = (const UINT32 *)(&typeTag);
     while (it < (int)ChunkType::TAGS_ARRAY_SIZE) {
         ++ p_testTag; // get rid of typeTag[0] (Unknown)
         ++ it;
@@ -134,11 +106,11 @@ Error Chunk::Init() {
     return Error::NONE;
 }
 
-Error Chunk::Read(void *data) {
+Error Chunk::Read(UINT8 *data) {
     return readFn[(int)m_type](data, this);
 };
 
-Error ReadUnknown(void *data, Chunk *owner) {
+Error ReadUnknown(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
     Chunk *headChunk = model->GetChunksHead();
@@ -147,25 +119,24 @@ Error ReadUnknown(void *data, Chunk *owner) {
 
     //TODO : popup modal to Ask Load or Ignore this chunk
     model->SetChunksHead(owner);
-    unsigned char *buf = owner->GetCrcString();
-    if (buf) {} // remove set_but_not_used warning
+    unsigned char const *buf = owner->GetCrcString();
     buf += 4; // jump over 'type' field
     buf += owner->GetDataSize(); // Actually don't read
+    if (buf) {// remove set_but_not_used warning
+    }
     owner->SetPrevious(headChunk);
     model->SetChunksHead(owner);
     return Error::NONE;
 }
 
-Error ReadIHDR(void *data, Chunk *owner) {
+Error ReadIHDR(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
     if (!model) return Error::REQUESTEDOBJECTNOTPRESENT;
-    s_imInfo *imInfo = (s_imInfo *)data;
+    auto *imInfo = (s_imInfo *)data;
     PngFile *fp = model->GetAssociatedFile();
     if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
-    ParseFlag pf = fp->getParseFlag();
-    pf = pf & ParseFlag::IHDRseen;
-    if (pf != ParseFlag::cleared)
+    if (ParseFlag pf = fp->getParseFlag() & ParseFlag::IHDRseen; pf != ParseFlag::cleared)
         return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     if (owner->GetDataSize() != 13) return Error::BADHEADER;
@@ -177,7 +148,6 @@ Error ReadIHDR(void *data, Chunk *owner) {
     buf += 4;
     if (intRead != 0) {
         imInfo->width = intRead;
-        intRead = 0;
     } else {
         return Error::BADHEADER;
     }
@@ -185,7 +155,6 @@ Error ReadIHDR(void *data, Chunk *owner) {
     buf += 4;
     if (intRead != 0) {
         imInfo->height = intRead;
-        intRead = 0;
     } else {
         return Error::BADHEADER;
     }
@@ -194,7 +163,6 @@ Error ReadIHDR(void *data, Chunk *owner) {
     ++buf;
     if (byteRead <= 16) {
         imInfo->bitfield.bitDepth = (std::bitset<5>)byteRead;
-        byteRead = 0;
         if (imInfo->bitfield.bitDepth.count() != 1) {
             return Error::BADHEADER;
         }
@@ -221,7 +189,6 @@ Error ReadIHDR(void *data, Chunk *owner) {
                 break;
         }
         imInfo->bitfield.colourType = (std::bitset<3>)byteRead;
-        byteRead = 0;
     } else {
         return Error::BADHEADER;
     }
@@ -246,7 +213,7 @@ Error ReadIHDR(void *data, Chunk *owner) {
     return Error::NONE;
 }
 
-Error ReadPLTE(void *data, Chunk *owner) {
+Error ReadPLTE(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
@@ -254,17 +221,17 @@ Error ReadPLTE(void *data, Chunk *owner) {
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
     if (model->GetNumIDAT()) return Error::CHUNKSHOULDNOTAPPEARTHERE; //there was already IDAT seen
     PngFile *fp = model->GetAssociatedFile();
-    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
-    ParseFlag pf = fp->getParseFlag() & ParseFlag::PLTEseen;
-    if (pf != ParseFlag::cleared) return Error::CHUNKNOTUNIQUE;
+    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;    
+    if (ParseFlag pf = fp->getParseFlag() & ParseFlag::PLTEseen; pf != ParseFlag::cleared)
+        return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     UINT32 size = owner->GetDataSize();
     UINT32 paletteSize = size / 3;
-    s_imInfo *p_inf = model->GetInfo();
+    s_imInfo const *p_inf = model->GetInfo();
     if (p_inf == nullptr) return Error::MEMORYERROR;
     if (p_inf->bitfield.colourType.to_ulong() % 4 == 0 ) //coltype 0 or 4 forbidden
         return Error::BADPALETTE;
-    s_paletteEntry *palEntry = (s_paletteEntry *)data;
+    auto *palEntry = (s_paletteEntry *)data;
     s_paletteEntry entryRead;
     unsigned char *buf = owner->GetCrcString();
     buf += 4; // jump over 'type' field
@@ -281,18 +248,15 @@ Error ReadPLTE(void *data, Chunk *owner) {
     return Error::NONE;
 }
 
-Error ReadIDAT(void *data, Chunk *owner) {
+Error ReadIDAT(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
     int numIDAT = model->GetNumIDAT();
-    if (numIDAT != 0) {
-        if (headChunk->GetType() != ChunkType::IDAT) {
-            return Error::IDATNOTCONSECUTIVE;
-        }
-    }
+    if (numIDAT != 0 && headChunk->GetType() != ChunkType::IDAT)
+        return Error::IDATNOTCONSECUTIVE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     //TODO zlib integration | implementation
     ++ numIDAT;
@@ -302,7 +266,7 @@ Error ReadIDAT(void *data, Chunk *owner) {
     return Error::NONE;
 }
 
-Error ReadIEND(void *data, Chunk *owner) {
+Error ReadIEND(UINT8 *data, Chunk *owner) {
     if (data || ! owner) return Error::MEMORYERROR; //data should be NULL !
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
@@ -313,315 +277,7 @@ Error ReadIEND(void *data, Chunk *owner) {
     return Error::IENDREACHED;
 }
 
-Error ReadcHRM(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadgAMA(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadiCCP(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadsBIT(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadsRGB(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadbKGD(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadhIST(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadtRNS(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadpHYs(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadsPLT(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadtIME(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadiTXt(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadtEXt(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadzTXt(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadoFFs(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadpCAL(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadsCAL(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadgIFg(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadgIFt(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadgIFx(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadsTER(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReaddSIG(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
-    Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-
-//TODO the logic there>
-
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
-    return Error::NONE;
-}
-
-Error ReadeXIf(void *data, Chunk *owner) {
+Error ReadcHRM(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
@@ -635,8 +291,316 @@ Error ReadeXIf(void *data, Chunk *owner) {
     return Error::NONE;
 }
 
-Error ReadfRAc(void *data, Chunk *owner) {
-   if (! data || ! owner) return Error::MEMORYERROR;
+Error ReadgAMA(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadiCCP(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadsBIT(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadsRGB(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadbKGD(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadhIST(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadtRNS(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadpHYs(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadsPLT(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadtIME(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadiTXt(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadtEXt(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadzTXt(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadoFFs(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadpCAL(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadsCAL(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadgIFg(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadgIFt(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadgIFx(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadsTER(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReaddSIG(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadeXIf(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+    Model *model = owner->GetModel();
+    Chunk *headChunk = model->GetChunksHead();
+    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+
+//TODO the logic there>
+
+    owner->SetPrevious(headChunk);
+    model->SetChunksHead(owner);
+    return Error::NONE;
+}
+
+Error ReadfRAc(UINT8 *data, Chunk *owner) {
+    if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
     Chunk *headChunk = model->GetChunksHead();
@@ -651,12 +615,12 @@ Error ReadfRAc(void *data, Chunk *owner) {
 
 /** Default template for Read() methods
 
-Error ReadXXXX(void *data, Chunk *owner) {
+Error ReadXXXX(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
     Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    if (!headChunk) return Error::BADHEADER; #this chunk can't come first
 
     <do the logic there>
 

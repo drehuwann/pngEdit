@@ -4,6 +4,9 @@
 #include <basetsd.h>
 #include <intrin.h>
 #define BREAKPOINT __debugbreak();
+enum class MenuID {
+    ID_Save = 1, ID_Load, ID_Info, ID_Layo, ID_Exit, ID_Undo, ID_Redo, ID_Abou
+};
 #else  //WIN32
 #ifdef POSIX
 #include <sys/types.h>
@@ -21,26 +24,6 @@ class MyFrame; //Fwd declaration
 #error nonWIn or nonPosix not implemented yet.
 #endif //POSIX
 #endif //WIN32
-
-//Common constants
-#define ID_Save 1
-#define ID_Load 2
-#define ID_Info 3
-#define ID_Layo 4
-#define ID_Exit 5
-#define ID_Undo 6
-#define ID_Redo 7
-#define ID_Abou 8
-
-#define SIZE_X 500
-#define SIZE_Y 300
-#define aboutStr "\tpng Editor was initially a quick home made tool to work on \
-small 16*16 icons defined in png files.\r\nIt growed becoming a tool to check \
-eventual steganography embedded in .png files.\r\nCopyright drehuwann@gmail.com\
-\r\nPublished under the terms of the General Public License.\r\n\
-(See https://gnu.org/licenses/gpl.html)"
-#define infoStr "Dimensions(WxH) : %ux%u\r\nColourType/BitDepth : %s/%lu bit(s)\
-\r\nInterlace : %s"
 
 #ifdef _DEBUG
     #define _BP_ BREAKPOINT
