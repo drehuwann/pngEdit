@@ -8,18 +8,18 @@
 #endif // POSIX  
 #endif  // WIN32
 
+#include "singleton.h"
 #include "model.h"
+#include "view.h"
 #include "controller.h"
 
 //forward declarations
 class Model;
 class Controller;
 
-class Engine {
+class Engine final : public Singleton<Engine> {
 public:
-    Engine();
-    ~Engine();
-    
+    ~Engine() override;    
     /// @brief Checks validity of parameters(no nullptr!).
     /// if everything is ok, copy params in Engine private fields.
     /// if private fields were not null, asks for confirmation and free old
@@ -28,13 +28,15 @@ public:
     /// @param view pointer on the view
     /// @param ctrl pointer on the controller
     /// @return Error::NONE on success.
-    Error Init(Model *modl, void *view, Controller *ctrl);
+    Error Init(Model *modl, View *view, Controller *ctrl);
     Model *GetModel();
     Controller *GetController();
-    void *GetView();
-    
+    View *GetView();
+
 private:
+    friend class Singleton<Engine>; // Allows Singleton to access private constructor
+    Engine();
     Model *m_modl;
-    void *m_view; //TODO encapsulate this naked ptr in class View
+    View *m_view;
     Controller *m_ctrl;
 };

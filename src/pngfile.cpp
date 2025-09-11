@@ -67,7 +67,7 @@ void PngFile::setParseFlag(ParseFlag pf) {
 
 Error PngFile::Load() {
 #ifdef WIN32
-    auto inStr = (LPCTSTR)(filepath.c_str());
+    auto inStr = filepath.c_str();
     const char *cStr = ToCstr(inStr);
     if (fopen_s(&fileBuffer, cStr, "rb")) {
         return Error::FAILOPEN;

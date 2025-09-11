@@ -27,8 +27,7 @@ static constexpr array<array<char, 4>, static_cast<std::size_t>(ChunkType::TAGS_
 }};
 
 Chunk::~Chunk() {
-    if (crcString) free(crcString);
-    crcString = nullptr;
+    if (! crcString.empty()) crcString.clear();
     if (this->isInitialized) {
         this->model->SetChunksHead(this->previous);
     } else {
@@ -46,7 +45,7 @@ bool Chunk::TestCRC() {
 };
 
 void Chunk::ComputeCRC() {
-    auto buf = reinterpret_cast<const unsigned char*>(crcString);
+    auto buf = reinterpret_cast<const unsigned char*>(crcString.data());
     calcCRC = crc32_compute(buf, size + 4);
 }
 
@@ -66,31 +65,35 @@ bool Chunk::GetInitStatus() const {
     return this->isInitialized;
 }
 
-unsigned char *Chunk::GetCrcString() {
+std::vector<unsigned char> &Chunk::GetCrcString() {
     return this->crcString;
 };
 
 Error Chunk::Init() {
-    if (crcString) return Error::OTHER; // We shouldn't alloc again crcString !
+    if (! crcString.empty()) return Error::OTHER; // We shouldn't alloc again crcString !
     if (this->model == nullptr) return Error::MEMORYERROR; //elementary security
     UINT32 uintBuf = 0;
     if (!std::fread(&uintBuf, sizeof(uintBuf), 1, file)) return Error::FAILREAD;
     size = ntoh(uintBuf);
     uintBuf = 0;
-    crcString = (unsigned char *)malloc(size + 4);
-    if (crcString == nullptr) return Error::MEMORYERROR;
-    if (!std::fread(&crcString[0], sizeof(crcString[0]), size + 4, file)) {
-        free(crcString);
+    try {
+        crcString.resize(size + 4);
+    } catch (const std::bad_alloc &) {
+        return Error::MEMORYERROR;
+    }
+    if (!std::fread(crcString.data(), sizeof(unsigned char), size + 4, file)) {
+        crcString.clear();
         return Error::FAILREAD;
     }
     if (!std::fread(&uintBuf, sizeof(uintBuf), 1, file)) return Error::FAILREAD;
     readCRC = ntoh(uintBuf);
     if (!TestCRC()) {
-        free(crcString);
+        crcString.clear();
         return Error::BADCRC;
     }
     auto it = (int)(ChunkType::Unknown);
-    UINT32 chunkTag = *((UINT32 *)crcString);
+    UINT32 chunkTag = 0;
+    std::memcpy(&chunkTag, crcString.data(), sizeof(chunkTag));
     auto const *p_testTag = (const UINT32 *)(&typeTag);
     while (it < (int)ChunkType::TAGS_ARRAY_SIZE) {
         ++ p_testTag; // get rid of typeTag[0] (Unknown)
@@ -119,7 +122,7 @@ Error ReadUnknown(UINT8 *data, Chunk *owner) {
 
     //TODO : popup modal to Ask Load or Ignore this chunk
     model->SetChunksHead(owner);
-    unsigned char const *buf = owner->GetCrcString();
+    unsigned char const *buf = owner->GetCrcString().data();
     buf += 4; // jump over 'type' field
     buf += owner->GetDataSize(); // Actually don't read
     if (buf) {// remove set_but_not_used warning
@@ -129,87 +132,92 @@ Error ReadUnknown(UINT8 *data, Chunk *owner) {
     return Error::NONE;
 }
 
+static Error ReadIHDRDimensions(const unsigned char *buf, s_imInfo *imInfo) {
+    UINT32 width = 0;
+    UINT32 height = 0;
+    std::memcpy(&width, buf, sizeof(width));
+    std::memcpy(&height, buf + 4, sizeof(height));
+    width = ntoh(width);
+    height = ntoh(height);
+
+    if (width == 0 || height == 0) return Error::BADHEADER;
+    imInfo->width = width;
+    imInfo->height = height;
+    return Error::NONE;
+}
+
+static Error ReadIHDRBitDepth(const unsigned char *buf, s_imInfo *imInfo) {
+    unsigned char bitDepth = *buf;
+    if (bitDepth > 16) return Error::BADHEADER;
+
+    imInfo->bitfield.bitDepth = std::bitset<5>(bitDepth);
+    if (imInfo->bitfield.bitDepth.count() != 1) return Error::BADHEADER;
+
+    return Error::NONE;
+}
+
+static Error ReadIHDRColorType(const unsigned char *buf, s_imInfo *imInfo) {
+    unsigned char colourType = *buf;
+    if (colourType > 6 || colourType == 1 || colourType == 5) return Error::BADHEADER;
+
+    auto depth = imInfo->bitfield.bitDepth.to_ulong();
+    switch (colourType) {
+        case 2: case 4: case 6:
+            if (depth < 8) return Error::BADHEADER;
+            break;
+        case 3:
+            if (depth == 16) return Error::BADHEADER;
+            break;
+        default:
+            return Error::BADHEADER;
+    }
+
+    imInfo->bitfield.colourType = std::bitset<3>(colourType);
+    return Error::NONE;
+}
+
+static Error ValidateByte(unsigned char value) {
+    return (value == 0) ? Error::NONE : Error::BADHEADER;
+}
+
 Error ReadIHDR(UINT8 *data, Chunk *owner) {
-    if (! data || ! owner) return Error::MEMORYERROR;
+    if (!data || !owner) return Error::MEMORYERROR;
+
     Model *model = owner->GetModel();
     if (!model) return Error::REQUESTEDOBJECTNOTPRESENT;
+
     auto *imInfo = (s_imInfo *)data;
+
     PngFile *fp = model->GetAssociatedFile();
-    if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;
-    if (ParseFlag pf = fp->getParseFlag() & ParseFlag::IHDRseen; pf != ParseFlag::cleared)
+    if (!fp) return Error::REQUESTEDOBJECTNOTPRESENT;
+
+    if ((fp->getParseFlag() & ParseFlag::IHDRseen) != ParseFlag::cleared)
         return Error::CHUNKNOTUNIQUE;
-    if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+
+    if (!owner->GetInitStatus()) return Error::NOTINITIALIZED;
     if (owner->GetDataSize() != 13) return Error::BADHEADER;
-    Chunk *headChunk = model->GetChunksHead();
-    if (headChunk) return Error::IHDRNOTFIRST;
-    unsigned char *buf = owner->GetCrcString();
-    buf += 4; // jump over 'type' field
-    UINT32 intRead = ntoh(*((UINT32 *)buf));  // width
-    buf += 4;
-    if (intRead != 0) {
-        imInfo->width = intRead;
-    } else {
-        return Error::BADHEADER;
-    }
-    intRead = ntoh(*((UINT32 *)buf));  // height
-    buf += 4;
-    if (intRead != 0) {
-        imInfo->height = intRead;
-    } else {
-        return Error::BADHEADER;
-    }
-    unsigned char byteRead = 0;
-    byteRead = *buf;  // bitdepth
+    if (model->GetChunksHead()) return Error::IHDRNOTFIRST;
+
+    const unsigned char *buf = owner->GetCrcString().data() + 4;
+
+    if (Error err = ReadIHDRDimensions(buf, imInfo); err != Error::NONE) return err;
+    buf += 8;
+
+    if (Error err = ReadIHDRBitDepth(buf, imInfo); err != Error::NONE) return err;
     ++buf;
-    if (byteRead <= 16) {
-        imInfo->bitfield.bitDepth = (std::bitset<5>)byteRead;
-        if (imInfo->bitfield.bitDepth.count() != 1) {
-            return Error::BADHEADER;
-        }
-    } else {
-        return Error::BADHEADER;
-    }
-    byteRead = *buf;  // colourType
+
+    if (Error err = ReadIHDRColorType(buf, imInfo); err != Error::NONE) return err;
     ++buf;
-    if ((byteRead <= 6) && (byteRead != 1) && (byteRead != 5)) {
-        switch (byteRead) {
-            case 2:
-            case 4:
-            case 6:
-                if (imInfo->bitfield.bitDepth.to_ulong() < 8UL) {
-                    return Error::BADHEADER;
-                }
-                break;
-            case 3:
-                if (imInfo->bitfield.bitDepth.to_ulong() == 16UL) {
-                    return Error::BADHEADER;
-                }
-                break;
-            default:
-                break;
-        }
-        imInfo->bitfield.colourType = (std::bitset<3>)byteRead;
-    } else {
-        return Error::BADHEADER;
-    }
-    byteRead = *buf;  // compression type
-    ++buf;
-    if (byteRead != 0) {
-        return Error::BADHEADER;
-    }
-    byteRead = *buf;  // filter method
-    ++buf;
-    if (byteRead != 0) {
-        return Error::BADHEADER;
-    }
-    byteRead = *buf;  // interlace
-    if (byteRead > 1) {
-        return Error::BADHEADER;
-    }
-    imInfo->interlace = (byteRead == 1);
-    owner->SetPrevious(headChunk);
+
+    if (Error err = ValidateByte(*buf++); err != Error::NONE) return err; // compression
+    if (Error err = ValidateByte(*buf++); err != Error::NONE) return err; // filter
+    if (*buf > 1) return Error::BADHEADER;
+
+    imInfo->interlace = (*buf == 1);
+    owner->SetPrevious(nullptr);
     model->SetChunksHead(owner);
     fp->setParseFlag(ParseFlag::IHDRseen);
+
     return Error::NONE;
 }
 
@@ -233,7 +241,7 @@ Error ReadPLTE(UINT8 *data, Chunk *owner) {
         return Error::BADPALETTE;
     auto *palEntry = (s_paletteEntry *)data;
     s_paletteEntry entryRead;
-    unsigned char *buf = owner->GetCrcString();
+    unsigned char *buf = owner->GetCrcString().data();
     buf += 4; // jump over 'type' field
     while (paletteSize) {
         entryRead = *((s_paletteEntry *)buf);

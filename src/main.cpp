@@ -10,7 +10,6 @@
 #include <tchar.h>
 #endif  // WIN32
 
-#include "defs.h"
 #include "engine.h"
 #include <array>
 
@@ -41,35 +40,28 @@ constexpr std::array<const char *const, 2> interlaceStr = {
    "No interlace", "Adam 7"
 };
 
-/// Global object to represent running Engine
-Engine *engine = nullptr;
-
 // common functions
 Engine *InitEngine(HWND hWnd) {
    if (!hWnd) return nullptr;
-   auto *toRet = new Engine();
+   auto *toRet = &Engine::Instance();
    if (! toRet) return nullptr;
    auto *modl = new Model(toRet);
-   if (!modl) {
-      if (toRet) {
-         delete toRet;
-         toRet = nullptr;
-      }
-      return nullptr;
-   }
+   if (!modl) return nullptr;
    auto *ctrl = new Controller(toRet);
    if (!ctrl) {
       if (modl) delete modl;
-      if (toRet) {
-         delete toRet;
-         toRet = nullptr;
-      }
       return nullptr;
    }
-   if (toRet->Init(modl, (void *)hWnd, ctrl) != Error::NONE) {
+   auto *view = new View(hWnd);
+   if (!view) {
       if (ctrl) delete ctrl;
       if (modl) delete modl;
-      delete toRet;
+      return nullptr;
+   }
+   if (toRet->Init(modl, view, ctrl) != Error::NONE) {
+      if (ctrl) delete ctrl;
+      if (modl) delete modl;
+      if (view) delete view;
       toRet = nullptr;         
    }
    return toRet;
@@ -105,9 +97,6 @@ static const TCHAR szWindowClass[] = _T("DesktopApp");
 /// The string that appears in the application's title bar.
 static const TCHAR szTitle[] = _T("png Editor");
 
-/// Stored instance handle for use in Win32 API calls such as FindResource
-HINSTANCE hInst;
-
 /// Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -137,9 +126,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       MessageBox(nullptr, _T("Call to RegisterClassEx failed!"), szTitle, 0);
       return 1;
    }
-
-   // Store instance handle in our global variable
-   hInst = hInstance;
    if (hPrevInstance) {
       //suppress warning not-used
    }
@@ -147,17 +133,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       //TODO args parsing
    }
 
-   // The parameters to CreateWindowEx explained:
-   // WS_EX_OVERLAPPEDWINDOW : An optional extended window style.
-   // szWindowClass: the name of the application
-   // szTitle: the text that appears in the title bar
-   // WS_OVERLAPPEDWINDOW: the type of window to create
-   // CW_USEDEFAULT, CW_USEDEFAULT: initial position (x, y)
-   // 500, 100: initial size (width, length)
-   // NULL: the parent of this window
-   // NULL: this application does not have a menu bar
-   // hInstance: the first parameter from WinMain
-   // NULL: not used in this application
    HWND hWnd = CreateWindowEx(
       WS_EX_OVERLAPPEDWINDOW,
       szWindowClass,
@@ -216,8 +191,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
          AppendMenu(hEdit, MF_STRING, static_cast<UINT_PTR>(MenuID::ID_Redo), _T("Redo"));
          AppendMenu(hHelp, MF_STRING, static_cast<UINT_PTR>(MenuID::ID_Abou), _T("About"));
          SetMenu(hWnd, hMenubar);
-         engine = InitEngine(hWnd);
-         if (!engine) return 1;
+         if (!InitEngine(hWnd)) return 1; //TODO catch this!
          break;
       }
       case WM_COMMAND: {
@@ -246,7 +220,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             // Display the Open dialog box.
             if (GetOpenFileName(&ofn)==TRUE) {
                const char *utfPath = ToCstr(ofn.lpstrFile);
-               Model *mod = engine->GetModel();
+               Model *mod = Engine::Instance().GetModel();
                mod->PickFile(utfPath);
                if (utfPath && utfPath != (const char *)ofn.lpstrFile) {
                   delete utfPath;
@@ -255,7 +229,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             break;
          }
          if (LOWORD(wParam) == static_cast<UINT_PTR>(MenuID::ID_Info)) {
-            const s_imInfo *inf = engine->GetModel()->GetInfo();
+            const s_imInfo *inf = Engine::Instance().GetModel()->GetInfo();
             if (inf == nullptr) {
                MessageBox(hWnd, _T("There is no image info available.\nDid you load a valid \
 *.png file before querying info ?"), _T("WARNING"), 0);
@@ -278,8 +252,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             }
          }
          if (LOWORD(wParam) == static_cast<UINT_PTR>(MenuID::ID_Layo)) {
-            const Controller *ctrl = engine->GetController();
-            Chunk *head = engine->GetModel()->GetChunksHead();
+            Engine &eng = Engine::Instance();
+            const Controller *ctrl = eng.GetController();
+            Chunk *head = eng.GetModel()->GetChunksHead();
             if (ctrl == nullptr) {
                MessageBox(hWnd, _T("There is no controller available."),
                   _T("CRITICAL"), 0);

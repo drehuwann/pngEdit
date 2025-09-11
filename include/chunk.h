@@ -4,6 +4,7 @@
 #include <basetsd.h>
 #endif  // WIN32
 #include <cstdio>
+#include <vector>
 #include "engine.h"
 #include "defs.h"
 #include "model.h"
@@ -119,11 +120,11 @@ public:
     void SetPrevious(Chunk *prev);
     Model *GetModel();
     bool GetInitStatus() const;
-    unsigned char *GetCrcString();
+    std::vector<unsigned char> &GetCrcString();
 
 private:
     Model *model;
-    unsigned char *crcString = nullptr;
+    std::vector<unsigned char> crcString;
     Chunk *previous = nullptr;
     FILE *file;
     UINT32 readCRC = 0;
