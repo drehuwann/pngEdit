@@ -66,6 +66,187 @@ void PngFile::setParseFlag(ParseFlag pf) {
 }
 
 Error PngFile::Load() {
+    // 1) Open the file (Windows vs POSIX)
+    if (auto err = openFile(); err != Error::NONE) 
+        return err;
+
+    // 2) Validate PNG signature
+    if (auto err = validatePngHeader(); err != Error::NONE) {
+        closeFile();
+        return err;
+    }
+
+    // 3) Read and process all chunks
+    auto err = processChunks();
+
+    // 4) Close the file and return final status
+    if (auto cerr = closeFile(); err == Error::NONE)
+        err = cerr;
+
+    return err;
+}
+
+// --- Private helpers implementations ---
+Error PngFile::openFile() {
+#ifdef WIN32
+    // Convert UTF-16 path to narrow string for fopen_s
+    const char *cStr = ToCstr(filepath.c_str());
+    if (fopen_s(&fileBuffer, cStr, "rb")) {
+        delete[] cStr;
+        return Error::FAILOPEN;
+    }
+    delete[] cStr;
+#elif defined(POSIX)
+    // POSIX fopen
+    fileBuffer = fopen(filepath.c_str(), "rb");
+    if (!fileBuffer)
+        return Error::FAILOPEN;
+#else
+#  error "Platform not supported"
+#endif
+    return Error::NONE;
+}
+
+Error PngFile::validatePngHeader() {
+    // Check PNG signature bytes
+    if (auto err = isPng(); err != Error::NONE) {
+        fclose(fileBuffer);
+        fileBuffer = nullptr;
+        return err;
+    }
+    return Error::NONE;
+}
+
+Error PngFile::processChunks() {
+    Error err = Error::NONE;
+    while (err == Error::NONE) {
+        auto chunk = std::make_unique<Chunk>(fileBuffer, model);
+        if (!chunk)
+            return Error::MEMORYERROR;
+
+        serializedData sd{};
+        sd.type = chunk->GetType();
+        err = chunk->Init();
+        // 2) if Init succeeded, dispatch it
+        if (err == Error::NONE)
+            err = dispatchChunk(*chunk, sd);
+        // 3) single break when anything fails
+        if (err != Error::NONE)
+            break;
+    }
+    // post-IEND logic
+    if (err == Error::IENDREACHED)
+        return finalizeAfterIEND();
+    return err;
+}
+
+Error PngFile::dispatchChunk(Chunk &chunk, serializedData &sd) {
+    // Route chunk processing based on its type
+    switch (chunk.GetType()) {
+        case ChunkType::IHDR:   return handleIHDR(chunk, sd);
+        case ChunkType::PLTE:   return handlePLTE(chunk, sd);
+        case ChunkType::IDAT:   return handleIDAT(chunk, sd);
+        case ChunkType::IEND:   return handleIEND(chunk, sd);
+        default:                return handleGeneric(chunk, sd);
+    }
+}
+
+Error PngFile::handleIHDR(Chunk &chunk, serializedData &sd) {
+    // Allocate and read PNG header info
+    auto info = std::make_shared<s_imInfo>();
+    if (auto err = chunk.Read(reinterpret_cast<UINT8*>(info.get())); err != Error::NONE)
+        return err;
+    sd.data = std::make_unique<std::any>(info);
+    model->SetInfo(info);
+    return Error::NONE;
+}
+Error PngFile::handlePLTE(Chunk &chunk, serializedData &sd) {
+    // Validate PLTE chunk length and read palette entries
+    auto size    = chunk.GetDataSize();
+    auto palSz   = size/3;
+
+    if (auto maxPal  = (UINT16)(1 << model->GetInfo()->bitfield.bitDepth.to_ulong()); size%3 || palSz > maxPal)
+        return Error::BADPALETTE;
+
+    auto palette = std::make_shared<std::vector<s_paletteEntry>>(palSz);
+    if (auto err = chunk.Read(reinterpret_cast<UINT8*>(palette->data())); err != Error::NONE)
+        return err;
+
+    sd.data = std::make_unique<std::any>(palette);
+
+    model->SetPalette(palette);
+    model->SetPaletteSize(static_cast<UINT8>(palSz));
+    return Error::NONE;
+}
+
+Error PngFile::handleIDAT(Chunk &chunk, serializedData &sd) {
+    // Read image data for IDAT chunk
+    auto size = chunk.GetDataSize();
+    if (size == 0)
+        return Error::IDATEMPTY;
+    auto buffer = std::make_shared<std::vector<UINT8>>(size);
+    if (auto err = chunk.Read(buffer->data()); err != Error::NONE)
+        return err;
+    sd.data = std::make_unique<std::any>(buffer);
+
+    // TODO: Integrate with zlib decompression
+    // 4) optionally hand it off to model
+    // model->AppendIDAT(buffer->data(), size);
+
+    return Error::NONE;
+}
+
+Error PngFile::handleIEND(Chunk &chunk, serializedData &sd) {
+    // Ensure no extra data in IEND
+    if (chunk.GetDataSize())
+        return Error::BADFOOTER;
+    sd.data = std::make_unique<std::any>(nullptr);
+    return chunk.Read(nullptr);
+}
+
+Error PngFile::handleGeneric(Chunk &chunk, serializedData &sd) {
+    // Default handler for unknown chunk types: read raw bytes into a vector
+    auto size = chunk.GetDataSize();
+
+    // Allocate exactly 'size' bytes on the heap
+    auto buffer = std::make_shared<std::vector<UINT8>>(size);
+
+    // Read chunk data directly into our vector
+    if (auto err = chunk.Read(buffer->data()); err != Error::NONE)
+        return err;
+
+    // Store the shared_ptr<vector<UINT8>> in sd.data for later retrieval
+    sd.data = std::make_unique<std::any>(buffer);
+
+    return Error::NONE;
+}
+
+
+Error PngFile::finalizeAfterIEND() {
+    // Check for extra bytes after IEND marker
+    if (int c = fgetc(fileBuffer); c == EOF)
+        return feof(fileBuffer) ? Error::NONE : Error::FAILREAD;
+
+    // Rewind one byte if not EOF
+    fseek(fileBuffer, -1, SEEK_CUR);
+    // TODO: Notify user about extra data after IEND
+    return Error::NONE;
+}
+
+Error PngFile::closeFile() {
+    if (!fileBuffer)
+        return Error::NONE;
+
+    // Close file handle and clear buffer
+    if (fclose(fileBuffer) == EOF)
+        return Error::FAILCLOSE;
+
+    fileBuffer = nullptr;
+    return Error::NONE;
+}
+
+/*
+Error PngFile::Load() {
 #ifdef WIN32
     auto inStr = filepath.c_str();
     const char *cStr = ToCstr(inStr);
@@ -178,3 +359,4 @@ Error PngFile::Load() {
     }
     return errCode;
 }
+*/

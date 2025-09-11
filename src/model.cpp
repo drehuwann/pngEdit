@@ -1,4 +1,5 @@
 #include "model.h"
+#include <memory>
 
 /** @brief utility function used in scanline size calculations
  *  @param num(erator)
@@ -17,25 +18,17 @@ Model::Model(Engine *engine) : eng(engine), headChunk(nullptr),
 
 Model::~Model() {
     while(headChunk) delete headChunk;
-    if (m_file) delete m_file;
-    m_file = nullptr;
-    if (m_info) delete m_info;
-    m_info = nullptr;
-    if (inflateBuffer) delete inflateBuffer;
-    inflateBuffer = nullptr;
-    if (pal) delete pal;
-    pal = nullptr;
 }
 
 Engine *Model::GetEngine() {
     return this->eng;
 }
 
-s_imInfo *Model::GetInfo() {
+std::shared_ptr<s_imInfo> Model::GetInfo() {
     return this->m_info;
 }
 
-void Model::SetInfo(s_imInfo *infoPtr) {
+void Model::SetInfo(std::shared_ptr<s_imInfo> infoPtr) {
     this->m_info = infoPtr;
     UINT8 samplesByPixel = 0;
     switch ((this->m_info->bitfield.colourType).to_ulong()) {
@@ -62,7 +55,7 @@ Palette Model::GetPalette() {
     return this->pal;
 }
 
-void Model::SetPalette(Palette palette) {
+void Model::SetPalette(const Palette &palette) {
     this->pal = palette;
 }
 
@@ -82,37 +75,72 @@ void Model::SetPaletteSize(UINT8 size) {
     this->palSize = size;
 }
 
-void Model::PickFile(const char *path) {
+struct Snapshot {
+    Chunk *headChunk; 
+    std::shared_ptr<PngFile> m_file;
+    std::shared_ptr<s_imInfo> m_info;
+    ImBuffer inflateBuffer;
+    Palette pal;
+    int numIDAT;
+    UINT8 palSize;
+    UINT8 pixelBinarySize;
+};
+
+void Model::PickFile(const char* path) {
     if (m_file) {
-        //TODO : ask for saving, saves eventually
-        delete m_file;
-        m_file = nullptr;
-        this->Reset();
+        // TODO: if (Model::isDirty() prompt user to save;
+        // if user say yes, call Save()…
+        // But don’t destroy the old Model until the new one is known‐good
     }
-    m_file = new PngFile();
-    m_file->SetModel(this);
-    SSIZE_T err = (m_file->Pick(path));
-    if (err < 0) throw err;
+    Snapshot backup {
+        headChunk, 
+        std::move(m_file),
+        std::move(m_info),
+        std::move(inflateBuffer),
+        std::move(pal),
+        numIDAT,
+        palSize,
+        pixelBinarySize
+    };
+    Reset();
+    // Lazily create our PngFile object if we didn’t have one already
+    if (!m_file) {
+        m_file = std::make_unique<PngFile>();
+        m_file->SetModel(this);
+    }
+    
+    if (SSIZE_T err = m_file->Pick(path); err < 0) {
+        // on failure, restore the backup
+        headChunk = backup.headChunk;
+        m_file = std::move(backup.m_file);
+        m_info = std::move(backup.m_info);
+        inflateBuffer = std::move(backup.inflateBuffer);
+        pal = std::move(backup.pal);
+        numIDAT = backup.numIDAT;
+        palSize = backup.palSize;
+        pixelBinarySize = backup.pixelBinarySize;
+        throw err;
+    }
+
 }
 
-PngFile *Model::GetAssociatedFile() {
+std::shared_ptr<PngFile> Model::GetAssociatedFile() {
     return m_file;
 }
 
 void Model::Reset() {
-    m_file = nullptr;
     while(headChunk) delete headChunk;
-    m_info = nullptr;
-    //TODO free buffer and palette IMPORTANT
-    inflateBuffer = nullptr;
-    pal = nullptr;
+    m_file.reset();
+    m_info.reset();
+    inflateBuffer.reset();
+    pal.reset();
     numIDAT = 0;
     palSize = 0;
     pixelBinarySize = 0;
 }
 
 Error Model::ReserveInflateBuffer() {
-    if (!(this->m_info)) return Error::NOIMGINFO;
+    if (!(this->m_info)) return Error::NOIMGINFO;    
     size_t scanlineSize = 0;
     size_t bufferSize = 0;
     if (this->m_info->interlace) {
@@ -157,9 +185,7 @@ Error Model::ReserveInflateBuffer() {
         scanlineSize ++; // +1 byte for filter type
         bufferSize = scanlineSize * this->m_info->height;
     }
-    //TODO Allocate buffer.
-    if (bufferSize) {
-        // suppress warning set_butnot_used
-    }
+    // Allocate a brand-new vector<Byte> of the exact requested size
+    inflateBuffer = std::make_unique<std::vector<Byte>>(bufferSize);
     return Error::NONE;
 }

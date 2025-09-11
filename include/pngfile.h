@@ -5,12 +5,14 @@
 #include "model.h"
 #include <cstdio>
 #include <filesystem>
+#include <memory>
+#include <any>
 
 enum class ChunkType : int;
 
 struct serializedData {
     ChunkType type;
-    UINT8 *data;
+    std::unique_ptr<std::any> data;
 };
 
 enum class ParseFlag : UINT32 {
@@ -39,6 +41,7 @@ ParseFlag operator&(const ParseFlag pf1, const ParseFlag pf2);
 
 // forward declarations
 class Model;
+class Chunk;
 
 class PngFile {
 public:
@@ -68,6 +71,25 @@ private:
     Error isPng();
 
     Error Load();
+    
+    //private helpers for Load()
+    Error openFile();
+    Error validatePngHeader();
+    /// @brief loop over and process each chunk
+    Error processChunks();
+    /// @brief Dispatch to the correct handler based on chunk type
+    Error dispatchChunk(Chunk &chunk, serializedData &sd);
+
+    // Handlers for specific chunk types
+    Error handleIHDR   (Chunk &chunk, serializedData &sd);
+    Error handlePLTE   (Chunk &chunk, serializedData &sd);
+    Error handleIDAT   (Chunk &chunk, serializedData &sd);
+    Error handleIEND   (Chunk &chunk, serializedData &sd);
+    Error handleGeneric(Chunk &chunk, serializedData &sd);
+
+    /// @brief Called after IEND to detect any extra data
+    Error finalizeAfterIEND();
+    Error closeFile();
 
     std::filesystem::path filepath;
     FILE *fileBuffer;

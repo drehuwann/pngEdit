@@ -229,7 +229,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             break;
          }
          if (LOWORD(wParam) == static_cast<UINT_PTR>(MenuID::ID_Info)) {
-            const s_imInfo *inf = Engine::Instance().GetModel()->GetInfo();
+            auto inf = Engine::Instance().GetModel()->GetInfo();
             if (inf == nullptr) {
                MessageBox(hWnd, _T("There is no image info available.\nDid you load a valid \
 *.png file before querying info ?"), _T("WARNING"), 0);
