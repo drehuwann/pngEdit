@@ -33,7 +33,8 @@ struct s_paletteEntry {
     UINT8 blue = 0;
 } /*__packed*/;
 
-using Palette = s_paletteEntry *;
+using Palette = std::shared_ptr<std::vector<s_paletteEntry>>;
+using ImBuffer = std::unique_ptr<std::vector<Byte>>;
 
 class Model {
 public:
@@ -41,8 +42,8 @@ public:
     ~Model();
 
     Engine *GetEngine();
-    s_imInfo *GetInfo();
-    void SetInfo(s_imInfo *infoPtr);
+    std::shared_ptr<s_imInfo> GetInfo();
+    void SetInfo(std::shared_ptr<s_imInfo> infoPtr);
 
     /// @brief 
     /// @return the last read chunk.
@@ -51,14 +52,16 @@ public:
     Chunk *GetChunksHead();
     void SetChunksHead(Chunk *head);
     Palette GetPalette();
-    void SetPalette(Palette palette);
+    void SetPalette(const Palette &palette);
     int GetNumIDAT() const;
     void SetNumIDAT(int num);
     UINT8 GetPaletteSize() const;
     void SetPaletteSize(UINT8 size);
     void PickFile(const char *path);
-    PngFile *GetAssociatedFile();
-    /// @brief force @ref m_file to nullptr
+    std::shared_ptr<PngFile> GetAssociatedFile();
+    // ImBuffer Accessors for zlib or other consumers
+    Byte* InflateBufData() noexcept { return inflateBuffer->data(); }
+    size_t InflateBufSize() const noexcept { return inflateBuffer->size(); }
 
 private:
     Error ReserveInflateBuffer();
@@ -71,9 +74,9 @@ private:
     /// (See ~Chunk() ...)
     Chunk *headChunk; 
 
-    PngFile *m_file;
-    s_imInfo *m_info;
-    Byte *inflateBuffer;
+    std::shared_ptr<PngFile> m_file;
+    std::shared_ptr<s_imInfo> m_info;
+    ImBuffer inflateBuffer;
     Palette pal;
     int numIDAT;
     UINT8 palSize;

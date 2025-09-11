@@ -188,7 +188,7 @@ Error ReadIHDR(UINT8 *data, Chunk *owner) {
 
     auto *imInfo = (s_imInfo *)data;
 
-    PngFile *fp = model->GetAssociatedFile();
+    std::shared_ptr<PngFile> fp = model->GetAssociatedFile();
     if (!fp) return Error::REQUESTEDOBJECTNOTPRESENT;
 
     if ((fp->getParseFlag() & ParseFlag::IHDRseen) != ParseFlag::cleared)
@@ -228,14 +228,14 @@ Error ReadPLTE(UINT8 *data, Chunk *owner) {
     Chunk *headChunk = model->GetChunksHead();
     if (!headChunk) return Error::BADHEADER; //this chunk can't come first
     if (model->GetNumIDAT()) return Error::CHUNKSHOULDNOTAPPEARTHERE; //there was already IDAT seen
-    PngFile *fp = model->GetAssociatedFile();
+    std::shared_ptr<PngFile> fp = model->GetAssociatedFile();
     if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;    
     if (ParseFlag pf = fp->getParseFlag() & ParseFlag::PLTEseen; pf != ParseFlag::cleared)
         return Error::CHUNKNOTUNIQUE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     UINT32 size = owner->GetDataSize();
     UINT32 paletteSize = size / 3;
-    s_imInfo const *p_inf = model->GetInfo();
+    auto p_inf = model->GetInfo();
     if (p_inf == nullptr) return Error::MEMORYERROR;
     if (p_inf->bitfield.colourType.to_ulong() % 4 == 0 ) //coltype 0 or 4 forbidden
         return Error::BADPALETTE;
