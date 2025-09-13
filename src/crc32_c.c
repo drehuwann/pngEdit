@@ -24,5 +24,5 @@ uint32_t crc32_compute(const unsigned char* buf, size_t len) {
     unsigned long c = 0xffffffffL;
     for (size_t n = 0; n < len; ++n)
         c = crc_table[(c ^ buf[n]) & 0xff] ^ (c >> 8);
-    return c ^ 0xffffffffUL;
+    return (c ^ 0xffffffffUL) & 0xffffffff; // returns crc forced to 32 bits
 }
