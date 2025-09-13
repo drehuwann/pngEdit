@@ -42,7 +42,7 @@ public:
     ~Model();
 
     Engine *GetEngine();
-    std::shared_ptr<s_imInfo> GetInfo();
+    std::shared_ptr<s_imInfo> GetInfo() const;
     void SetInfo(std::shared_ptr<s_imInfo> infoPtr);
 
     /// @brief 
@@ -51,14 +51,14 @@ public:
     /// (See ~Chunk() ...)
     Chunk *GetChunksHead();
     void SetChunksHead(Chunk *head);
-    Palette GetPalette();
+    Palette GetPalette() const;
     void SetPalette(const Palette &palette);
     int GetNumIDAT() const;
     void SetNumIDAT(int num);
     UINT8 GetPaletteSize() const;
     void SetPaletteSize(UINT8 size);
     void PickFile(const char *path);
-    std::shared_ptr<PngFile> GetAssociatedFile();
+    std::shared_ptr<PngFile> GetAssociatedFile() const;
     // ImBuffer Accessors for zlib or other consumers
     Byte* InflateBufData() noexcept { return inflateBuffer->data(); }
     size_t InflateBufSize() const noexcept { return inflateBuffer->size(); }

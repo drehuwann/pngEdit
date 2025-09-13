@@ -13,6 +13,13 @@
 
 #ifdef WIN32
 #include <winsock2.h>
+#else  // WIN32
+#if __has_include(<unistd.h>)
+#include<arpa/inet.h>
+#include "defs.h"
+#else  // unistd.h
+#error non Win or non POSIX systems not implemented.
+#endif  //unistd.h
 #endif  // WIN32
 
 template <typename T> T ntoh(T integral);
@@ -33,8 +40,6 @@ template <typename T> T hton(T integral);
 
 #else  // WIN32
 #if __has_include(<unistd.h>)
-#include<arpa/inet.h>
-inline UINT16 ntoh(UINT16 integral) {return ntohs(integral);}
 inline UINT16 hton(UINT16 integral) {return htons(integral);}
 inline UINT32 ntoh(UINT32 integral) {return ntohl(integral);}
 inline UINT32 hton(UINT32 integral) {return htonl(integral);}
@@ -46,7 +51,7 @@ inline UINT64 ntoh(UINT64 integral) {
 inline UINT64 hton(UINT64 integral) {
     if (1 == htonl(1)) return integral;
     else return  ((((UINT64)htonl(integral & 0xffffffffUL)) << 32) |
-        htonl((UINT32)((integral) >> 32)));
+        htonl((UINT32)(integral >> 32)));
 }
 #else  // __has_include(<unistd.h>)
 #error non Win or non POSIX systems not implemented.

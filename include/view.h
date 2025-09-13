@@ -1,7 +1,10 @@
 #pragma once
 
-#include "utf4win.h"
 #include "defs.h"
+
+enum class MenuID {
+    ID_Save = 1, ID_Load, ID_Info, ID_Layo, ID_Exit, ID_Undo, ID_Redo, ID_Abou
+};
 
 class View {
 public:
