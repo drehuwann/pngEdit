@@ -15,7 +15,7 @@
             ],
             "windowsSdkVersion": "10.0.22621.0",
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe",
-            "cStandard": "c17",
+            "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-msvc-x64",
             "configurationProvider": "ms-vscode.cmake-tools"
@@ -35,7 +35,7 @@
                 "LINUX",
                 "POSIX"
             ],
-            "cStandard": "c17",
+            "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-gcc-x64",
             "configurationProvider": "ms-vscode.cmake-tools"

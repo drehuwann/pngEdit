@@ -1,6 +1,8 @@
 #include "pngfile.h"
 #include "htonntoh.h"
+#ifdef WIN32
 #include "utf4win.h"
+#endif  // WIN32
 #include <array>
 
 using std::array;

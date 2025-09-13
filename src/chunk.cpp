@@ -2,6 +2,7 @@
 #include "htonntoh.h"
 #include "crc32_c.h"
 #include <array>
+#include <cstring>
 
 using std::array;
 

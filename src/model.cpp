@@ -24,7 +24,7 @@ Engine *Model::GetEngine() {
     return this->eng;
 }
 
-std::shared_ptr<s_imInfo> Model::GetInfo() {
+std::shared_ptr<s_imInfo> Model::GetInfo() const {
     return this->m_info;
 }
 
@@ -51,7 +51,7 @@ void Model::SetChunksHead(Chunk *head) {
     this->headChunk = head;
 }
 
-Palette Model::GetPalette() {
+Palette Model::GetPalette() const {
     return this->pal;
 }
 
@@ -124,7 +124,7 @@ void Model::PickFile(const char* path) {
 
 }
 
-std::shared_ptr<PngFile> Model::GetAssociatedFile() {
+std::shared_ptr<PngFile> Model::GetAssociatedFile() const {
     return m_file;
 }
 
