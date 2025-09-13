@@ -162,6 +162,7 @@ Error PngFile::handleIHDR(Chunk &chunk, serializedData &sd) {
     model->SetInfo(info);
     return Error::NONE;
 }
+
 Error PngFile::handlePLTE(Chunk &chunk, serializedData &sd) {
     // Validate PLTE chunk length and read palette entries
     auto size    = chunk.GetDataSize();

@@ -11,13 +11,9 @@ static inline size_t Ceil(const size_t num, const size_t den) {
     return res;
 }
 
-Model::Model(Engine *engine) : eng(engine), headChunk(nullptr),
-        m_file(nullptr), m_info(nullptr), inflateBuffer(nullptr), pal(nullptr), 
-        numIDAT(0), palSize(0), pixelBinarySize(0) {
-}
-
-Model::~Model() {
-    while(headChunk) delete headChunk;
+Model::Model(Engine *engine) : eng(engine), m_file(nullptr), m_info(nullptr),
+        inflateBuffer(nullptr), pal(nullptr), numIDAT(0), palSize(0),
+        pixelBinarySize(0) {
 }
 
 Engine *Model::GetEngine() {
@@ -41,14 +37,6 @@ void Model::SetInfo(std::shared_ptr<s_imInfo> infoPtr) {
     }
     this->pixelBinarySize = samplesByPixel *
         (UINT8)((this->m_info->bitfield.bitDepth).to_ulong());
-}
-
-Chunk *Model::GetChunksHead() {
-    return this->headChunk;
-}
-
-void Model::SetChunksHead(Chunk *head) {
-    this->headChunk = head;
 }
 
 Palette Model::GetPalette() const {
@@ -76,7 +64,7 @@ void Model::SetPaletteSize(UINT8 size) {
 }
 
 struct Snapshot {
-    Chunk *headChunk; 
+    std::vector<std::unique_ptr<Chunk>> chunks; 
     std::shared_ptr<PngFile> m_file;
     std::shared_ptr<s_imInfo> m_info;
     ImBuffer inflateBuffer;
@@ -93,7 +81,7 @@ void Model::PickFile(const char* path) {
         // But don’t destroy the old Model until the new one is known‐good
     }
     Snapshot backup {
-        headChunk, 
+        std::move(chunks), 
         std::move(m_file),
         std::move(m_info),
         std::move(inflateBuffer),
@@ -111,7 +99,7 @@ void Model::PickFile(const char* path) {
     
     if (SSIZE_T err = m_file->Pick(path); err < 0) {
         // on failure, restore the backup
-        headChunk = backup.headChunk;
+        chunks = std::move(backup.chunks);
         m_file = std::move(backup.m_file);
         m_info = std::move(backup.m_info);
         inflateBuffer = std::move(backup.inflateBuffer);
@@ -128,8 +116,12 @@ std::shared_ptr<PngFile> Model::GetAssociatedFile() const {
     return m_file;
 }
 
+std::vector<std::unique_ptr<Chunk>> &Model::GetChunks() noexcept {
+    return chunks;
+}
+
 void Model::Reset() {
-    while(headChunk) delete headChunk;
+    chunks.clear();
     m_file.reset();
     m_info.reset();
     inflateBuffer.reset();

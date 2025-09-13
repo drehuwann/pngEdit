@@ -6,3 +6,5 @@ output/*
 tstString.txt
 #include/tstString.txt
 zlib
+doc/html
+doc/latex

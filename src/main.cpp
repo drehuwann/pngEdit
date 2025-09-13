@@ -352,44 +352,47 @@ private:
 };
 
 wxIMPLEMENT_APP(MyApp);
- 
+
 bool MyApp::OnInit() {
-   auto frame = std::make_unique<MyFrame *>(new MyFrame);
+   auto frame = std::make_unique<MyFrame>();
    if (!frame) return false;
-   if (const auto *engine = InitEngine(*(frame.get())); !engine) {
+   if (const auto *engine = InitEngine(frame.get()); !engine) {
       if (frame) frame.reset();
       return false;
    }
-   (*(frame.get()))->Show(true);
+   frame.get()->Show(true);
+   if (frame.release()) {
+      // do nothing, but suppress warning
+   }
    return true;
 }
  
 MyFrame::MyFrame() : wxFrame(nullptr, wxID_ANY, "png Editor", wxDefaultPosition,
 wxSize(SIZE_X, SIZE_Y)) {
-   auto menuFile = std::make_unique<wxMenu *>(new wxMenu);
-   (*(menuFile.get()))->Append(static_cast<int>(MenuID::ID_Save), "&Save\tCtrl-S",
+   auto menuFile = std::make_unique<wxMenu>();
+   menuFile->Append(static_cast<int>(MenuID::ID_Save), "&Save\tCtrl-S",
             "Save current work as <fileneme>.sav");
-   (*(menuFile.get()))->Append(static_cast<int>(MenuID::ID_Load), "&Open\tCtrl-O",
+   menuFile->Append(static_cast<int>(MenuID::ID_Load), "&Open\tCtrl-O",
             "Loads a png file to work on");
-   (*(menuFile.get()))->AppendSeparator();
-   (*(menuFile.get()))->Append(static_cast<int>(MenuID::ID_Info), "&Info\tCtrl-I",
+   menuFile->AppendSeparator();
+   menuFile->Append(static_cast<int>(MenuID::ID_Info), "&Info\tCtrl-I",
             "Show image Info");
-   (*(menuFile.get()))->Append(static_cast<int>(MenuID::ID_Layo), "&Layout\tCtrl-L",
+   menuFile->Append(static_cast<int>(MenuID::ID_Layo), "&Layout\tCtrl-L",
             "Show chunk layout");
-   (*(menuFile.get()))->AppendSeparator();
-   (*(menuFile.get()))->Append(wxID_EXIT);
-   auto menuEdit = std::make_unique<wxMenu *>(new wxMenu);
-   (*(menuEdit.get()))->Append(static_cast<int>(MenuID::ID_Undo), "&Undo\tCtrl-Z",
+   menuFile->AppendSeparator();
+   menuFile->Append(wxID_EXIT);
+   auto menuEdit = std::make_unique<wxMenu>();
+   menuEdit->Append(static_cast<int>(MenuID::ID_Undo), "&Undo\tCtrl-Z",
             "Undo last operation on image");
-   (*(menuEdit.get()))->Append(static_cast<int>(MenuID::ID_Redo), "&Redo\tCtrl-Y",
+   menuEdit->Append(static_cast<int>(MenuID::ID_Redo), "&Redo\tCtrl-Y",
             "Redo last undone operation on image");
-   auto menuHelp = std::make_unique<wxMenu *>(new wxMenu);
-   (*(menuHelp.get()))->Append(wxID_ABOUT);
-   auto menuBar = std::make_unique<wxMenuBar *>(new wxMenuBar);
-   (*(menuBar.get()))->Append((*(menuFile.get())), "&File");
-   (*(menuBar.get()))->Append((*(menuEdit.get())), "&Edit");
-   (*(menuBar.get()))->Append((*(menuHelp.get())), "&Help");
-   MyFrame::SetMenuBar(*(menuBar.get()));
+   auto menuHelp = std::make_unique<wxMenu>();
+   menuHelp->Append(wxID_ABOUT);
+   auto menuBar = std::make_unique<wxMenuBar>();
+   menuBar->Append(menuFile.release(), "&File");
+   menuBar->Append(menuEdit.release(), "&Edit");
+   menuBar->Append(menuHelp.release(), "&Help");
+   MyFrame::SetMenuBar(menuBar.release());
    MyFrame::CreateStatusBar();
    MyFrame::SetStatusText("Welcome to pngEditor!");
    Bind(wxEVT_MENU, &MyFrame::OnSave, this, static_cast<int>(MenuID::ID_Save));
@@ -428,7 +431,7 @@ void MyFrame::OnInfo(const wxCommandEvent &/*event*/) {
       UINT32 w = inf->width;
       UINT32 h = inf->height;
       int size = std::snprintf(nullptr, 0, infoStr, w, h, colstr, bd, intstr);
-      const auto str = std::make_unique<char>(size + 1); // +1 for null termination.
+      auto str = std::make_unique<char[]>(size + 1); // +1 for null termination.
       char *p_str = str.get();
       p_str[size] = 0;
       std::sprintf(p_str, infoStr, w, h, colstr, bd, intstr);
@@ -437,33 +440,34 @@ void MyFrame::OnInfo(const wxCommandEvent &/*event*/) {
 }
 
 void MyFrame::OnLayo(const wxCommandEvent &/*event*/) {
-   Chunk *head = Engine::Instance().GetModel()->GetChunksHead();
-   if (head == nullptr) {
+   auto model = Engine::Instance().GetModel();
+   const auto &chunks = model->GetChunks();
+
+   if (chunks.empty()) {
       wxMessageBox("There is no chunk layout available.\nDid you load a valid "
-"           *.png file before querying layout ?", "WARNING", wxOK | wxICON_WARNING,
+            "*.png file before querying layout ?", "WARNING", wxOK | wxICON_WARNING,
             this
       );
    } else {
-      auto MyLayoutView = std::make_unique<wxTreeCtrl *>(new wxTreeCtrl());
-      wxTreeItemId root = (*(MyLayoutView.get()))->AddRoot("Chunks layout");
-      while (head) {
+      auto MyLayoutView = std::make_unique<wxTreeCtrl>();
+      wxTreeItemId root = MyLayoutView.get()->AddRoot("Chunks layout");
+      for (const auto& chunkPtr : chunks) {  
          std::array<char, 5> tag;
          tag[4] = 0x00;
-         UINT32 tTag = hton(head->GetTypeTag());
+         UINT32 tTag = hton(chunkPtr->GetTypeTag());
          std::sprintf(&tag[0], "%c%c%c%c",
             (tTag & 0xff000000) >> 24,
             (tTag & 0xff0000) >> 16,
             (tTag & 0xff00) >> 8,
             (tTag & 0xff)
          );
-         (*(MyLayoutView.get()))->InsertItem(root, 0, wxString(tag.data()));
-         head = head->GetPrevious();
+         MyLayoutView->AppendItem(root, wxString(tag.data()));
       }
       int W;
       int H;
       this->DoGetClientSize(&W, &H);
-      (*(MyLayoutView.get()))->Create(this, wxID_ANY, wxDefaultPosition, wxSize(W/4, H));
-      (*(MyLayoutView.get()))->Show(true);
+      MyLayoutView->Create(this, wxID_ANY, wxDefaultPosition, wxSize(W/4, H));
+      MyLayoutView.release()->Show(true);
    }
 }
  
