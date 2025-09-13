@@ -29,15 +29,6 @@ static constexpr array<array<char, 4>, static_cast<std::size_t>(ChunkType::TAGS_
 
 Chunk::~Chunk() {
     if (! crcString.empty()) crcString.clear();
-    if (this->isInitialized) {
-        this->model->SetChunksHead(this->previous);
-    } else {
-_BP_    // inserted to check if we go there
-
-        // TODO Free there what must be, then cleanly resume:
-        // TODO valgrind me!
-        // TODO make this house of in-memory cards clean & robust #!
-    }
 }
 
 bool Chunk::TestCRC() {
@@ -48,14 +39,6 @@ bool Chunk::TestCRC() {
 void Chunk::ComputeCRC() {
     auto buf = reinterpret_cast<const unsigned char*>(crcString.data());
     calcCRC = crc32_compute(buf, size + 4);
-}
-
-Chunk *Chunk::GetPrevious() {
-    return this->previous;
-}
-
-void Chunk::SetPrevious(Chunk *prev) {
-    this->previous = prev;
 }
 
 Model *Chunk::GetModel() {
@@ -117,19 +100,18 @@ Error Chunk::Read(UINT8 *data) {
 Error ReadUnknown(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first   
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::BADHEADER; //this chunk can't come first   
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
 
     //TODO : popup modal to Ask Load or Ignore this chunk
-    model->SetChunksHead(owner);
+
     unsigned char const *buf = owner->GetCrcString().data();
     buf += 4; // jump over 'type' field
     buf += owner->GetDataSize(); // Actually don't read
     if (buf) {// remove set_but_not_used warning
     }
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -197,7 +179,8 @@ Error ReadIHDR(UINT8 *data, Chunk *owner) {
 
     if (!owner->GetInitStatus()) return Error::NOTINITIALIZED;
     if (owner->GetDataSize() != 13) return Error::BADHEADER;
-    if (model->GetChunksHead()) return Error::IHDRNOTFIRST;
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (! chunks.empty()) return Error::IHDRNOTFIRST; //this chunk MUST come first   
 
     const unsigned char *buf = owner->GetCrcString().data() + 4;
 
@@ -215,8 +198,8 @@ Error ReadIHDR(UINT8 *data, Chunk *owner) {
     if (*buf > 1) return Error::BADHEADER;
 
     imInfo->interlace = (*buf == 1);
-    owner->SetPrevious(nullptr);
-    model->SetChunksHead(owner);
+
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     fp->setParseFlag(ParseFlag::IHDRseen);
 
     return Error::NONE;
@@ -226,8 +209,8 @@ Error ReadPLTE(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
     if (model->GetNumIDAT()) return Error::CHUNKSHOULDNOTAPPEARTHERE; //there was already IDAT seen
     std::shared_ptr<PngFile> fp = model->GetAssociatedFile();
     if(! fp) return Error::REQUESTEDOBJECTNOTPRESENT;    
@@ -252,8 +235,7 @@ Error ReadPLTE(UINT8 *data, Chunk *owner) {
         --paletteSize;
     }
     fp->setParseFlag(ParseFlag::PLTEseen);
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -261,17 +243,18 @@ Error ReadIDAT(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     Model *model = owner->GetModel();
     if(! model) return Error::REQUESTEDOBJECTNOTPRESENT;
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
     int numIDAT = model->GetNumIDAT();
-    if (numIDAT != 0 && headChunk->GetType() != ChunkType::IDAT)
+    if (numIDAT != 0 && chunks.back()->GetType() != ChunkType::IDAT)
         return Error::IDATNOTCONSECUTIVE;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
+
     //TODO zlib integration | implementation
+
     ++ numIDAT;
     model->SetNumIDAT(numIDAT);
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -279,10 +262,10 @@ Error ReadIEND(UINT8 *data, Chunk *owner) {
     if (data || ! owner) return Error::MEMORYERROR; //data should be NULL !
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
+
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::IENDREACHED;
 }
 
@@ -290,13 +273,12 @@ Error ReadcHRM(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -304,13 +286,12 @@ Error ReadgAMA(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -318,13 +299,12 @@ Error ReadiCCP(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -332,13 +312,12 @@ Error ReadsBIT(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -346,13 +325,12 @@ Error ReadsRGB(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -360,13 +338,12 @@ Error ReadbKGD(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -374,13 +351,12 @@ Error ReadhIST(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -388,13 +364,12 @@ Error ReadtRNS(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -402,13 +377,12 @@ Error ReadpHYs(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -416,13 +390,12 @@ Error ReadsPLT(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -430,13 +403,12 @@ Error ReadtIME(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -444,13 +416,12 @@ Error ReadiTXt(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -458,13 +429,12 @@ Error ReadtEXt(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -472,13 +442,12 @@ Error ReadzTXt(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -486,13 +455,12 @@ Error ReadoFFs(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -500,13 +468,12 @@ Error ReadpCAL(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -514,13 +481,12 @@ Error ReadsCAL(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -528,13 +494,12 @@ Error ReadgIFg(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -542,13 +507,12 @@ Error ReadgIFt(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -556,13 +520,12 @@ Error ReadgIFx(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -570,13 +533,12 @@ Error ReadsTER(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -584,13 +546,12 @@ Error ReaddSIG(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -598,13 +559,12 @@ Error ReadeXIf(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -612,13 +572,12 @@ Error ReadfRAc(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; //this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
 //TODO the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 
@@ -628,13 +587,12 @@ Error ReadXXXX(UINT8 *data, Chunk *owner) {
     if (! data || ! owner) return Error::MEMORYERROR;
     if (!(owner->GetInitStatus())) return Error::NOTINITIALIZED;
     Model *model = owner->GetModel();
-    Chunk *headChunk = model->GetChunksHead();
-    if (!headChunk) return Error::BADHEADER; #this chunk can't come first
+    std::vector<std::unique_ptr<Chunk>>& chunks = model->GetChunks();
+    if (chunks.empty()) return Error::IHDRNOTFIRST; //this chunk can't come first   
 
     <do the logic there>
 
-    owner->SetPrevious(headChunk);
-    model->SetChunksHead(owner);
+    chunks.push_back(std::make_unique<Chunk>(*owner));
     return Error::NONE;
 }
 

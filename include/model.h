@@ -5,6 +5,8 @@
 #include "engine.h"
 #include "pngfile.h"
 #include <bitset>
+//#include <memory>
+#include <vector>
 #include "zconf.h"
 
 // forward declarations
@@ -39,18 +41,12 @@ using ImBuffer = std::unique_ptr<std::vector<Byte>>;
 class Model {
 public:
     explicit Model(Engine *eng);
-    ~Model();
+    ~Model() = default;
 
     Engine *GetEngine();
     std::shared_ptr<s_imInfo> GetInfo() const;
     void SetInfo(std::shared_ptr<s_imInfo> infoPtr);
 
-    /// @brief 
-    /// @return the last read chunk.
-    /// Use it to free chunk linked list : while(headChunk) delete headChunk;
-    /// (See ~Chunk() ...)
-    Chunk *GetChunksHead();
-    void SetChunksHead(Chunk *head);
     Palette GetPalette() const;
     void SetPalette(const Palette &palette);
     int GetNumIDAT() const;
@@ -59,6 +55,10 @@ public:
     void SetPaletteSize(UINT8 size);
     void PickFile(const char *path);
     std::shared_ptr<PngFile> GetAssociatedFile() const;
+
+    /// @brief Returns all chunks in parsing order
+    std::vector<std::unique_ptr<Chunk>>& GetChunks() noexcept;
+
     // ImBuffer Accessors for zlib or other consumers
     Byte* InflateBufData() noexcept { return inflateBuffer->data(); }
     size_t InflateBufSize() const noexcept { return inflateBuffer->size(); }
@@ -69,10 +69,7 @@ private:
 
     Engine *eng;
 
-    /// @brief keep track of the last read chunk.
-    /// Use it to free chunk linked list : while( @ref headChunk ) delete @ref headChunk;
-    /// (See ~Chunk() ...)
-    Chunk *headChunk; 
+    std::vector<std::unique_ptr<Chunk>> chunks;
 
     std::shared_ptr<PngFile> m_file;
     std::shared_ptr<s_imInfo> m_info;

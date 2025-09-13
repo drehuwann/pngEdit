@@ -116,8 +116,6 @@ public:
 
     bool TestCRC();
     void ComputeCRC();
-    Chunk *GetPrevious();
-    void SetPrevious(Chunk *prev);
     Model *GetModel();
     bool GetInitStatus() const;
     std::vector<unsigned char> &GetCrcString();
@@ -125,7 +123,6 @@ public:
 private:
     Model *model;
     std::vector<unsigned char> crcString;
-    Chunk *previous = nullptr;
     FILE *file;
     UINT32 readCRC = 0;
     UINT32 calcCRC = 0;
